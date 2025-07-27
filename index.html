@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rubber Tapper's Log - บันทึกการกรีดยาง</title>
+        
+        <meta name="theme-color" content="#3A6B35">
+        <link rel="apple-touch-icon" href="images/icon-192x192.png">
+        <link rel="manifest" href="manifest.json">
+    
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+    
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-mode">
+
+    <div id="toast-container"></div>
+
+    <div id="level-up-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <span class="modal-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="party-popper" class="lucide lucide-party-popper"><path d="M5.8 11.3 2 22l10.7-3.79"></path><path d="M4 3h.01"></path><path d="M22 8h.01"></path><path d="M15 2h.01"></path><path d="M22 20h.01"></path><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"></path><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"></path><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"></path><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"></path></svg></span>
+            <h2>เลเวลอัพ!</h2>
+            <p id="level-up-text">ยินดีด้วย! คุณไปถึงเลเวล 2 แล้ว!</p>
+            <button id="close-level-up-modal-btn" class="btn btn-primary">สุดยอดไปเลย!</button>
+        </div>
+    </div>
+
+    <div id="daily-reward-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>รางวัลล็อกอินประจำวัน</h2>
+            </div>
+            <p id="daily-reward-streak-text">คุณล็อกอินต่อเนื่องเป็นวันที่ 1 แล้ว!</p>
+            <div id="daily-reward-grid" class="daily-reward-grid">
+            </div>
+            <button id="claim-daily-reward-btn" class="btn btn-primary" disabled>รับรางวัล!</button>
+        </div>
+    </div>
+
+    <div id="tree-selection-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>เลือกต้นยาง</h2>
+                <button id="close-tree-selection-modal-btn" class="btn-close"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="x" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
+            <div id="tree-selection-list" class="tree-selection-grid">
+            </div>
+        </div>
+    </div>
+    
+    <div id="sell-tree-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ลงขายต้นยาง</h2>
+                <button id="close-sell-tree-modal-btn" class="btn-close"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="x" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
+            <div id="sell-tree-modal-info" class="sell-modal-info">
+            </div>
+            <div class="sell-pricing">
+                <div class="input-group">
+                    <label for="sell-price-input">ตั้งราคาขาย (เหรียญ):</label>
+                    <input type="number" id="sell-price-input" min="1" placeholder="เช่น 1000">
+                </div>
+                <div class="price-details">
+                    <p>ค่าธรรมเนียม (5%): <span id="listing-fee-span">0</span> เหรียญ</p>
+                    <p><strong>คุณจะได้รับ: <span id="profit-span">0</span> เหรียญ</strong></p>
+                </div>
+            </div>
+            <button id="confirm-sell-btn" class="btn btn-primary" disabled="">ยืนยันการลงขาย</button>
+        </div>
+    </div>
+    
+    <div id="sale-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div id="sale-modal-form-view">
+                <div class="modal-header">
+                    <h2>บันทึกการขายยาง</h2>
+                    <button id="close-sale-modal-btn" class="btn-close"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="x" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+                </div>
+                <form id="sale-form">
+                    <div class="input-group">
+                        <label for="sale-weight-input">น้ำหนักรวม (กก.):</label>
+                        <input type="number" id="sale-weight-input" step="0.01" min="0" required placeholder="เช่น 550.5">
+                    </div>
+                    <div class="input-group" style="margin-top: 1rem; align-items: center; flex-direction: row; justify-content: space-between;">
+                        <label>น้ำหนักที่กรอกคือ:</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="sale-weight-type-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span id="sale-weight-type-label">ก่อนหัก %</span>
+                    </div>
+                    <div class="input-group" style="margin-top: 1rem;">
+                        <label for="sale-deduction-input">เปอร์เซ็นต์ที่หัก (%):</label>
+                        <input type="number" id="sale-deduction-input" step="0.1" min="0" max="100" required placeholder="เช่น 20">
+                    </div>
+                    <div class="input-group" style="margin-top: 1rem;">
+                        <label for="sale-amount-input">จำนวนเงินที่ได้รับ (บาท):</label>
+                        <input type="number" id="sale-amount-input" min="0" required placeholder="เช่น 15000">
+                    </div>
+                    <div class="sell-pricing" style="margin-top: 1.5rem; text-align: center;">
+                        <p>น้ำหนักสุทธิหลังหัก %:</p>
+                        <p><strong><span id="sale-net-weight-display">0.00</span> กก.</strong></p>
+                    </div>
+                </form>
+                <button type="submit" form="sale-form" id="confirm-sale-btn" class="btn btn-primary">ยืนยันการบันทึก</button>
+            </div>
+            <div id="sale-modal-result-view" class="hidden">
+                 <span class="modal-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check-circle" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span>
+                 <h2>บันทึกข้อมูลสำเร็จ!</h2>
+                 <div class="summary-card" style="margin-bottom: 1.5rem;">
+                     <div class="summary-item">
+                         <h4>ราคา/กก.</h4>
+                         <p><span id="sale-result-price-per-kg">0.00</span> ฿</p>
+                     </div>
+                     <div class="summary-item">
+                         <h4>ประมาณการรายได้ครั้งหน้า</h4>
+                         <p><span id="sale-result-est-income">0</span> ฿</p>
+                     </div>
+                 </div>
+                 <div class="button-group-vertical">
+                     <button id="sale-result-new-sale-btn" class="btn btn-secondary">บันทึกรายการขายเพิ่ม</button>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <header class="main-header">
+            <div class="header-title">
+                <h1><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="leaf" class="lucide lucide-leaf"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg> Rubber Tapper's Log</h1>
+            </div>
+            <div class="header-user-info">
+                <div id="user-profile" class="user-profile-header">
+                    <span id="user-level">เลเวล 1</span>
+                    <div class="xp-bar-container">
+                        <div id="user-xp-bar" class="xp-bar" style="width: 54%;"></div>
+                    </div>
+                </div>
+                <div id="coin-balance" class="coin-balance-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="coins" class="lucide lucide-coins"><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></svg>
+                    <span id="coin-balance-amount" class="">385</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="shop-btn" class="icon-btn" title="ร้านค้า"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="store" class="lucide lucide-store"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"></path></svg></button>
+                <button id="sound-shop-btn" class="icon-btn" title="ร้านค้าเสียง"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="volume-2" class="lucide lucide-volume-2"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></button>
+                <button id="achievements-btn" class="icon-btn" title="ดูเหรียญรางวัล"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="award" class="lucide lucide-award"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"></path><circle cx="12" cy="8" r="6"></circle></svg></button>
+                <button id="theme-toggle-btn" class="icon-btn" title="สลับธีมพื้นฐาน"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sun" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="moon" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></button>
+                <button id="settings-btn" class="icon-btn" title="ตั้งค่า"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+        </header>
+
+        <main>
+            <section id="setup-screen" class="screen active">
+                <div class="screen-content anim-slide-in-up">
+                    <h2>เริ่มต้นการกรีดยาง</h2>
+                    <div id="dynamic-info-panel" class="info-panel">
+                        <div class="info-header"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sparkles" class="lucide lucide-sparkles"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path><path d="M20 3v4"></path><path d="M22 5h-4"></path><path d="M4 17v2"></path><path d="M5 18H3"></path></svg><h3>สถานะของคุณ</h3></div>
+                        <div class="info-body">
+                            <div id="info-welcome" class="info-block"><p>สวัสดี! พร้อมสำหรับวันนี้หรือยัง?</p></div>
+                            <div id="info-streak" class="info-block"><p>ยอดเยี่ยม! คุณใช้งานต่อเนื่องมา <strong id="streak-days">5</strong> วันแล้ว! 🔥</p></div>
+                            <div id="info-goal-progress" class="info-block">
+                                <p>เป้าหมาย AI: <span id="goal-text"></span></p>
+                                <progress id="goal-progress-bar" value="80" max="100"></progress>
+                                <p class="progress-label">ครั้งล่าสุดทำได้: <span id="goal-progress-value"></span></p>
+                            </div>
+                            <div id="info-achievement-progress" class="info-block">
+                                <p>ใกล้แล้ว! <span id="achievement-text"></span></p>
+                                <progress id="achievement-progress-bar" value="95" max="100"></progress>
+                                <p class="progress-label"><span id="achievement-progress-value"></span></p>
+                            </div>
+                            <div id="info-daily-login" class="info-block active">
+                                <p>โบนัสล็อกอินรายวัน!</p>
+                                <p>ต่อเนื่อง: <strong id="daily-login-streak">1</strong> วัน</p>
+                                <p>รางวัลต่อไป: <strong id="daily-login-reward">20</strong> เหรียญ</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group hidden"><label for="total-trees-input">จำนวนต้นที่ต้องการกรีดรอบนี้:</label><input type="number" id="total-trees-input" min="1" value="100"></div>
+                    <div class="button-group-vertical">
+                        <button id="start-session-btn" class="btn btn-primary">เริ่มบันทึกการกรีด</button>
+                        <button id="log-sale-btn" class="btn btn-success" style="margin-top: 0.5rem;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="banknote"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01"></path><path d="M18 12h.01"></path></svg> บันทึกการขาย</button>
+                        <div class="secondary-actions">
+                            <button id="upgrades-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="chevrons-up" class="lucide lucide-chevrons-up"><path d="m17 11-5-5-5 5"></path><path d="m17 18-5-5-5 5"></path></svg>อัปเกรด</button>
+                            <button id="missions-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="star" class="lucide lucide-star"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path></svg>ภารกิจ</button>
+                            <button id="dashboard-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="layout-dashboard" class="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>แดชบอร์ด</button>
+                            <button id="history-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="history" class="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>ดูประวัติ</button>
+                            <button id="goals-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="target" class="lucide lucide-target"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12"cy="12" r="2"></circle></svg>เป้าหมาย AI</button>
+                            <button id="plantation-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="trees" class="lucide lucide-trees"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"></path><path d="M7 16v6"></path><path d="M13 19v3"></path><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"></path></svg>สวนของฉัน</button>
+                            <button id="breeding-nav-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="combine" class="lucide lucide-combine"><path d="M10 18H5a3 3 0 0 1-3-3v-1"></path><path d="M14 2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2"></path><path d="M20 2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2"></path><path d="m7 21 3-3-3-3"></path><rect x="14" y="14" width="8" height="8" rx="2"></rect><rect x="2" y="2" width="8" height="8" rx="2"></rect></svg>รวมต้นยาง</button>
+                            <button id="marketplace-nav-btn" class="btn btn-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="store" class="lucide lucide-store"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"></path></svg>ตลาดกลาง</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tapping-screen" class="screen">
+                <div id="pause-overlay" class="pause-overlay hidden">
+                    <div class="pause-content">
+                        <i data-lucide="cup-soda"></i>
+                        <h2>หยุดพักชั่วคราว</h2>
+                        <p>กดปุ่ม "ทำต่อ" หรือแตะที่ใดก็ได้เพื่อกรีดต่อ</p>
+                    </div>
+                </div>
+                <div class="screen-content tapping-layout">
+                    <div class="tapping-header">
+                        <div class="stats-grid">
+                            <div class="stat-card"><h3>ต้นที่</h3><p><span id="current-tree-number">1</span> / <span id="total-trees-display">100</span></p></div>
+                            <div class="stat-card"><h3>เวลาทั้งหมด</h3><p id="timer">00:00:00</p></div>
+                        </div>
+                        <div id="progress-container"><div id="progress-bar"></div></div>
+                    </div>
+
+                    <div id="main-tap-action-area">
+                        <button id="next-tree-btn" class="btn-tap">
+                            <i data-lucide="axe"></i>
+                            <span>กรีด</span>
+                        </button>
+                        <div class="tapping-secondary-actions-mobile">
+                             <button id="pause-session-btn" class="btn btn-secondary" disabled=""><i data-lucide="pause"></i> หยุดพัก</button>
+                            <button id="end-session-btn" class="btn btn-secondary"><i data-lucide="flag"></i> สิ้นสุด</button>
+                            <button id="end-session-full-btn" class="btn btn-primary"><i data-lucide="check-check"></i> เต็มสวน</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tapping-footer">
+                        <div id="real-time-stats-container" class="stats-grid hidden">
+                            <div class="stat-card"><h3>เฉลี่ย (วิ/ต้น)</h3><p id="rt-avg-time">0.00</p></div>
+                            <div class="stat-card"><h3>เวลาต้นนี้ (วิ)</h3><p id="rt-lap-time">0.00</p></div>
+                        </div>
+    
+                        <div id="pacing-indicator" class="pacing-card">
+                            <div class="pacing-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="gauge-circle" class="lucide lucide-gauge-circle"><path d="M15.6 2.7a10 10 0 1 0 5.7 5.7"></path><circle cx="12" cy="12" r="2"></circle><path d="M13.4 10.6 19 5"></path></svg></div>
+                            <div class="pacing-text">
+                                <span id="pacing-status">เทียบสถิติดีที่สุด</span>
+                                <strong id="pacing-time-diff">-0.54s</strong>
+                            </div>
+                        </div>
+    
+                        <div class="action-area">
+                            <div id="rt-session-loot-container" class="session-loot-display"></div>
+                            <div class="tapping-secondary-actions-desktop">
+                                <button id="pause-session-btn-desktop" class="btn btn-secondary" disabled=""><i data-lucide="pause"></i> หยุดพัก</button>
+                                <button id="end-session-btn-desktop" class="btn btn-secondary">สิ้นสุด (บางส่วน)</button>
+                                <button id="end-session-full-btn-desktop" class="btn btn-primary">สิ้นสุด (เต็มสวน)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="summary-screen" class="screen">
+                <div class="screen-content">
+                    <h2>สรุปผลการกรีดยาง</h2>
+                    <div id="new-record-badge"> 🎉 ทำลายสถิติใหม่! 🎉 </div>
+                    <div class="summary-card">
+                        <div class="summary-item"><h4>จำนวนต้นที่กรีด</h4><p id="summary-total-trees">150 ต้น</p></div>
+                        <div class="summary-item"><h4>เวลาที่ใช้ทั้งหมด</h4><p id="summary-total-time">01:30:45</p></div>
+                        <div class="summary-item"><h4>ความเร็วเฉลี่ย</h4><p><span id="summary-avg-time">36.30</span> วินาที/ต้น</p></div>
+                    </div>
+                    <div id="pacing-analysis-card" class="ai-card">
+                         <div class="ai-header"><span class="ai-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="trending-up" class="lucide lucide-trending-up"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg></span><h3>AI Pacing Analysis</h3></div>
+                         <div class="ai-body">
+                             <p id="pacing-analysis-text">คุณรักษาความเร็วได้สม่ำเสมอดีมากตลอดการกรีด!</p>
+                             <div class="pacing-details">
+                                <span>ครึ่งแรก: <strong id="pacing-first-half">36.1 วิ/ต้น</strong></span>
+                                <span>ครึ่งหลัง: <strong id="pacing-second-half">36.5 วิ/ต้น</strong></span>
+                             </div>
+                         </div>
+                    </div>
+                    <div id="ai-analysis-card" class="ai-card">
+                        <div class="ai-header"><span class="ai-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain-circuit" class="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M9 13a4.5 4.5 0 0 0 3-4"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M12 13h4"></path><path d="M12 18h6a2 2 0 0 1 2 2v1"></path><path d="M12 8h8"></path><path d="M16 8V5a2 2 0 0 1 2-2"></path><circle cx="16" cy="13" r=".5"></circle><circle cx="18" cy="3" r=".5"></circle><circle cx="20" cy="21" r=".5"></circle><circle cx="20" cy="8" r=".5"></circle></svg></span><h3>AI Assistant's Insight</h3></div>
+                        <div class="ai-body"><p id="ai-insight-text">กำลังวิเคราะห์ข้อมูลการกรีดของคุณ...</p></div>
+                    </div>
+                    <button id="new-session-btn" class="btn btn-primary">เริ่มรอบใหม่</button>
+                </div>
+            </section>
+            
+            <section id="achievements-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="trophy" class="lucide lucide-trophy"><path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"></path><path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"></path><path d="M18 9h1.5a1 1 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"></path><path d="M6 9H4.5a1 1 0 0 1 0-5H6"></path></svg> เหรียญรางวัลของคุณ</h2><p>จำนวนต้นที่กรีดสะสมทั้งหมด: <span id="lifetime-trees">0</span> ต้น</p></div>
+                    <div id="achievements-grid" class="content-grid"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="history-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="book-open" class="lucide lucide-book-open"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg> ประวัติการกรีด</h2><p>ย้อนดูผลงานและความสำเร็จของคุณ</p></div>
+                    <div id="history-list-container"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-history-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="goals-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="gem" class="lucide lucide-gem"><path d="M6 3h12l4 6-10 13L2 9Z"></path><path d="M11 3 8 9l4 13 4-13-3-6"></path><path d="M2 9h20"></path></svg> เป้าหมายอัจฉริยะ (AI Goal)</h2><p>AI จะกำหนดเป้าหมายที่ท้าทายและเหมาะสมกับคุณโดยอัตโนมัติ</p></div>
+                    <div class="goal-setting-card">
+                        <h4>เป้าหมายความเร็วเฉลี่ยปัจจุบัน</h4>
+                        <p class="current-goal-value"><span id="current-goal-display">ต้องการข้อมูลเพิ่มเพื่อตั้งเป้าหมาย</span></p>
+                        <hr>
+                        <p class="goal-explanation">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain-circuit" class="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M9 13a4.5 4.5 0 0 0 3-4"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M12 13h4"></path><path d="M12 18h6a2 2 0 0 1 2 2v1"></path><path d="M12 8h8"></path><path d="M16 8V5a2 2 0 0 1 2-2"></path><circle cx="16" cy="13" r=".5"></circle><circle cx="18" cy="3" r=".5"></circle><circle cx="20" cy="21" r=".5"></circle><circle cx="20" cy="8" r=".5"></circle></svg>
+                            เป้าหมายนี้คำนวณจากผลงานล่าสุดของคุณเพื่อให้คุณพัฒนาฝีมืออย่างต่อเนื่อง เมื่อคุณทำผลงานได้ดีขึ้นหรือเลเวลอัพ AI จะปรับเป้าหมายใหม่ที่ท้าทายยิ่งขึ้นให้คุณ!
+                        </p>
+                    </div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-goals-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboard-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bar-chart-3" class="lucide lucide-bar-chart-3"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg> แดชบอร์ด</h2><p>ภาพรวมและแนวโน้มผลงานของคุณ</p></div>
+                    
+                    <div id="dashboard-sales-card" class="ai-card">
+                        <div class="ai-header"><span class="ai-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="line-chart"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span><h3>วิเคราะห์ข้อมูลการขาย</h3></div>
+                        <div class="summary-card">
+                           <div class="summary-item"><h4>รายได้รวม</h4><p><span id="sales-total-income">0</span> ฿</p></div>
+                           <div class="summary-item"><h4>ราคาเฉลี่ย/กก.</h4><p><span id="sales-avg-price-per-kg">0.00</span> ฿</p></div>
+                           <div class="summary-item"><h4>รายได้เฉลี่ย/กรีด</h4><p><span id="sales-avg-income-per-tap">0.00</span> ฿</p></div>
+                           <div class="summary-item"><h4>รายได้เฉลี่ย/วัน*</h4><p><span id="sales-avg-income-per-day">0.00</span> ฿</p></div>
+                           <div class="summary-item"><h4>น้ำหนักเฉลี่ย/วัน*</h4><p><span id="sales-avg-weight-per-day">0.00</span> กก.</p></div>
+                        </div>
+                        <div class="ai-body" id="plantation-size-info" style="text-align: center; font-style: italic; display: none;">
+                            *คำนวณจากขนาดสวนที่บันทึกไว้ล่าสุด
+                        </div>
+                        <div id="dashboard-sales-empty-state" class="chart-empty-state" style="position: relative; border-radius: 0 0 12px 12px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                            <p>ยังไม่มีข้อมูลการขาย บันทึกการขายครั้งแรกเพื่อดูการวิเคราะห์</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4>แนวโน้มความเร็วเฉลี่ย (10 รอบล่าสุด)</h4>
+                        <div class="chart-body">
+                            <canvas id="avg-time-chart"></canvas>
+                            <div class="chart-empty-state">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                                <p>ต้องการข้อมูลการกรีดอย่างน้อย 2 รอบเพื่อแสดงกราฟนี้</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h4>จำนวนต้นที่กรีด (10 รอบล่าสุด)</h4>
+                        <div class="chart-body">
+                            <canvas id="trees-tapped-chart"></canvas>
+                            <div class="chart-empty-state">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                                <p>ต้องการข้อมูลการกรีดอย่างน้อย 2 รอบเพื่อแสดงกราฟนี้</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-dashboard-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="settings-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sliders-horizontal"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> ตั้งค่า</h2></div>
+                    <div class="settings-card">
+                        <div class="ai-body">
+                            <div class="input-group" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                                <label for="animation-effects-toggle">เปิดใช้งานเอฟเฟกต์แอนิเมชัน</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="animation-effects-toggle" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                         <div class="ai-header"><h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="database-zap"><path d="M4 6V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"></path><path d="M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"></path><path d="M4 9a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2"></path><path d="M20 9a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2"></path><path d="M7 15h1l2-3-2-3-1 1.5"></path><ellipse cx="12" cy="6" rx="9" ry="3"></ellipse></svg>จัดการข้อมูล</h3></div>
+                        <div class="ai-body button-group-vertical">
+                            <button id="export-data-btn" class="btn btn-secondary">ส่งออกข้อมูล (Backup)</button>
+                            <label for="import-file-input" class="btn btn-secondary">นำเข้าข้อมูล (Restore)</label>
+                            <input type="file" id="import-file-input" accept=".json" class="hidden">
+                            <button id="reset-data-btn" class="btn btn-danger">รีเซ็ตข้อมูลทั้งหมด</button>
+                        </div>
+                    </div>
+                     <div class="screen-footer">
+                        <button id="back-to-main-from-settings-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="missions-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="scroll-text"><path d="M8 21h12a2 2 0 0 0 2-2v-2h-3v-1a2 2 0 0 0-2-2H8Z"></path><path d="M19.5 16.5c-1.5 0-3 .5-3 2v2"></path><path d="M4 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"></path><path d="M8 6h4"></path><path d="M8 10h4"></path><path d="M8 14h2"></path></svg> ภารกิจประจำวัน</h2><p>ทำภารกิจให้สำเร็จเพื่อรับเหรียญรางวัล!</p></div>
+                    <div id="missions-list"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-missions-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="theme-shop-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="palette"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.5-2.45 5.5-5.5S17.051 2 12 2z"></path></svg> ร้านค้าธีม</h2><p>ปรับแต่งหน้าตาของแอปให้เป็นสไตล์ของคุณ</p></div>
+                    <div id="theme-shop-grid" class="content-grid"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-shop-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="sound-shop-screen" class="screen">
+                 <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="music-4"><path d="M9 18V5l12-2v13"></path><path d="m9 9 12-2"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg> ร้านค้าเสียง</h2><p>เปลี่ยนเสียงประกอบในเกมเพื่อความแปลกใหม่</p></div>
+                    <div id="sound-shop-grid" class="content-grid"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-sound-shop-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="upgrades-screen" class="screen">
+                <div class="screen-content">
+                     <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="rocket"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.3.05-3.05-.64-.75-2.21-.8-3.05-.05z"></path><path d="m12 15-3-3a9 9 0 0 1 3-13v7a9 9 0 0 1-13 3l-3-3z"></path><path d="M16 12h7"></path><path d="M21 12v-7"></path></svg> ศูนย์วิจัยและพัฒนา</h2><p>ใช้เหรียญเพื่ออัปเกรดความสามารถของคุณอย่างถาวร</p></div>
+                    <div id="upgrades-list" class="upgrades-container"></div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-upgrades-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="plantation-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sprout"><path d="M7 20h10"></path><path d="M10 20c-.5-2.5-.5-5 0-7.5-1-1-1.5-2.5-1-4C10 6.5 11 8 12 8s2-1.5 2-2.5c.5 1.5 0 3-1 4 .5 2.5.5 5 0 7.5"></path></svg> สวนยางของฉัน</h2><p>จัดการ ดูแล และอัปเกรดต้นยางทั้งหมดของคุณ</p></div>
+                    <div id="plantation-grid" class="tree-grid"></div>
+                    <div class="screen-footer">
+                        <button id="go-to-breeding-btn" class="btn btn-primary">ไปที่การรวมต้นยาง</button>
+                        <button id="back-to-main-from-plantation-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="breeding-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="flask-conical"><path d="M10 2v7.31"></path><path d="M14 9.31V2"></path><path d="M10 13.31C10 14.5 10.83 16 12 16a2 2 0 0 0 2-2.69"></path><path d="m3.17 7.31.29.29a2 2 0 0 0 2.83 0L8 6l2 2-2.5 2.5a2 2 0 0 0 0 2.83l.29.29"></path><path d="m14.5 11.83 1.25-1.25a2 2 0 0 0 0-2.83l-.29-.29a2 2 0 0 0-2.83 0L12 8l-2-2 1.17-1.17a2 2 0 0 1 2.83 0L16 6.5l-1.5 1.5"></path><path d="M8.25 20.69 7.3 21.64a2 2 0 0 0 0 2.82l2.83 2.83a2 2 0 0 0 2.82 0l.96-.96"></path><path d="M10.29 18.64c.19-.19.44-.3.71-.3h1c.26 0 .51.11.7.3"></path><path d="M12.71 16.64c.19.19.44.3.7.3h1c.27 0 .52-.11.71-.3"></path></svg> รวมต้นยาง (Breeding)</h2><p>รวมต้นยาง 2 ต้นเพื่อลุ้นรับต้นใหม่ที่แข็งแกร่งกว่าเดิม!</p></div>
+                    <div class="breeding-slots">
+                        <div class="slot">
+                            <h4 class="slot-header">ต้นที่ 1</h4>
+                            <div class="slot-content placeholder" data-slot-index="0"><i data-lucide="sprout"></i><p>เลือกต้นยาง</p></div>
+                        </div>
+                         <div class="slot">
+                            <h4 class="slot-header">ต้นที่ 2</h4>
+                            <div class="slot-content placeholder" data-slot-index="1"><i data-lucide="sprout"></i><p>เลือกต้นยาง</p></div>
+                        </div>
+                    </div>
+                    <div id="material-for-breeding-list"></div>
+                    <button id="breed-tree-btn" class="btn btn-primary" disabled>รวมต้นยาง!</button>
+                    <div id="breeding-result-panel" class="breeding-result-panel hidden">
+                        <h4>ผลลัพธ์การรวมต้นยาง!</h4>
+                        <div class="result-content">
+                            <i data-lucide="package"></i>
+                            <div>
+                                <p>คุณได้รับเมล็ดพันธุ์ใหม่:</p>
+                                <p><strong id="bred-tree-species">ต้นยางทนทาน (Rare)</strong></p>
+                                <p><strong id="bred-tree-attributes">ไม่มีคุณสมบัติพิเศษ</strong></p>
+                            </div>
+                        </div>
+                        <button class="btn btn-success">รับเมล็ดพันธุ์</button>
+                    </div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-breeding-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="marketplace-screen" class="screen">
+                <div class="screen-content">
+                    <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="shopping-cart"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.16"></path></svg> ตลาดกลาง</h2><p>ซื้อ-ขายต้นยางกับผู้เล่นคนอื่นๆ</p></div>
+                    <nav class="market-tabs">
+                        <button class="btn" data-tab="buy">ซื้อต้นยาง</button>
+                        <button class="btn" data-tab="sell">จัดการการขาย</button>
+                    </nav>
+                    <div id="market-buy-section" class="market-section">
+                        <div id="marketplace-listings-grid" class="tree-grid"></div>
+                    </div>
+                    <div id="market-sell-section" class="market-section">
+                        <div id="my-marketplace-listings"></div>
+                    </div>
+                    <div class="screen-footer">
+                        <button id="back-to-main-from-marketplace-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Panel for displaying Tree Info -->
+            <div id="tree-info-backdrop" class="info-panel-backdrop"></div>
+            <div id="tree-info-panel" class="tree-detail-panel">
+                <div class="tree-info-header">
+                    <h4>ข้อมูลต้นยาง</h4>
+                    <button id="close-tree-info-btn" class="btn-close"><i data-lucide="x"></i></button>
+                </div>
+                <div class="tree-info-body">
+                    <div class="tree-basic-info">
+                        <div class="tree-icon"><i data-lucide="trees"></i></div>
+                        <div class="tree-stats">
+                            <h4 id="selected-tree-name">ชื่อต้นยาง</h4>
+                            <p id="selected-tree-species">ความหายาก</p>
+                            <p>Level: <span id="selected-tree-level">1</span> / <span id="selected-tree-max-level">10</span></p>
+                        </div>
+                    </div>
+
+                    <div class="tree-exp-display">
+                        <h5><i data-lucide="bar-chart-2"></i> ค่าประสบการณ์ (EXP)</h5>
+                        <progress id="tree-exp-bar" value="50" max="100"></progress>
+                        <p class="progress-label"><span id="selected-tree-exp">50</span> / <span id="selected-tree-exp-next">100</span></p>
+                    </div>
+
+                    <div class="tree-attributes-display">
+                        <h5><i data-lucide="gem"></i> คุณสมบัติพิเศษ</h5>
+                        <ul id="tree-attributes" class="attribute-list"></ul>
+                    </div>
+
+                    <div class="tree-materials-display">
+                        <h5><i data-lucide="wrench"></i> วัตถุดิบสำหรับอัปเกรด</h5>
+                        <ul id="tree-materials-list" class="material-list"></ul>
+                    </div>
+
+                    <div class="tree-actions">
+                        <button id="upgrade-tree-btn" class="btn btn-primary"><i data-lucide="hammer"></i>อัปเกรด</button>
+                        <button id="activate-tree-btn" class="btn btn-secondary"><i data-lucide="power"></i>เปิดใช้งาน</button>
+                        <button id="sell-tree-btn" class="btn btn-danger"><i data-lucide="tag"></i>ขาย</button>
+                    </div>
+
+                    <div class="tree-plant-action">
+                        <div id="seed-plant-section">
+                            <p id="plant-action-description">คำอธิบาย</p>
+                            <button id="plant-tree-btn" class="btn btn-primary"><i data-lucide="shovel"></i>ปลูกเมล็ดพันธุ์</button>
+                        </div>
+                        <div id="seedling-care-section">
+                             <p>เวลาที่เหลือจนกว่าจะโตเต็มวัย:</p>
+                             <strong id="growth-countdown">00:00:00</strong>
+                             <div id="care-actions" class="care-actions">
+                                <button id="water-tree-btn" class="btn btn-secondary"><i data-lucide="cloud-drizzle"></i>รดน้ำ</button>
+                                <button id="fertilize-tree-btn" class="btn btn-secondary"><i data-lucide="leaf"></i>ให้ปุ๋ย</button>
+                             </div>
+                             <button id="grow-tree-btn" class="btn btn-success"><i data-lucide="sparkles"></i>โตเต็มวัย!</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer><p>สร้างสรรค์สำหรับนักกรีดยางยุคใหม่ 2025</p></footer>
+    </div>
+
+    <audio id="tap-sound" src="sounds/click.mp3" preload="auto"></audio>
+    <audio id="achievement-sound" src="sounds/success.mp3" preload="auto"></audio>
+    <audio id="mission-complete-sound" src="sounds/mission.mp3" preload="auto"></audio>
+    
+    <script type="module" src="js/dom.js"></script>
+    <script type="module" src="js/gameDataService.js"></script>
+    <script type="module" src="js/state.js"></script>
+    <script type="module" src="js/analysis.js"></script>
+    <script type="module" src="js/missions.js"></script>
+    <script type="module" src="js/session.js"></script>
+    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/upgrades.js"></script>
+    <script type="module" src="js/breeding.js"></script>
+    <script type="module" src="js/plantation.js"></script> 
+    <script type="module" src="js/main.js" defer=""></script> 
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered.'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+    <div id="coin-animation-container"></div>
+</body>
+</html>

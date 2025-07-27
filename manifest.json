@@ -1,0 +1,21 @@
+{
+  "name": "Rubber Tapper's Log",
+  "short_name": "Tapper's Log",
+  "description": "สมุดบันทึกนักกรีดยางพันธุ์ใหม่ ที่สนุก ท้าทาย และเป็นผู้ช่วยส่วนตัวของคุณ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#2c5b3d",
+  "icons": [
+    {
+      "src": "./images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

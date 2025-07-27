@@ -1,0 +1,152 @@
+{
+  "motd": "สุดสัปดาห์นี้มาเร่งผลิตกันเถอะ! มีกิจกรรมพิเศษรอคุณอยู่!",
+  "achievements": {
+      "master_tapper": { "title": "นักกรีดมือฉมัง", "description": "กรีดครบ 1,000 ต้น", "lucideIcon": "swords", "type": "trees", "target": 1000, "coinReward": 250 },
+      "speed_demon":   { "title": "เจ้าแห่งความเร็ว", "description": "ทำความเร็วเฉลี่ยต่ำกว่า 30 วินาที/ต้น", "lucideIcon": "zap", "type": "speed", "target": 30, "coinReward": 150 },
+      "marathoner":    { "title": "นักวิ่งมาราธอน", "description": "กรีดรวดเดียว 500+ ต้น", "lucideIcon": "footprints", "type": "session", "target": 500, "coinReward": 200 }
+  },
+  "themeShopItems": {
+      "noctua_tech": {
+          "id": "noctua_tech", "name": "Noctua Tech (ค่าเริ่มต้น)", "price": 0, "isDefault": true, "isDark": true,
+          "variables": {
+              "--bg-color": "#1A202C",
+              "--surface-bg": "rgba(45, 55, 72, 0.7)",
+              "--text-primary": "#E2E8F0",
+              "--text-secondary": "#A0AEC0",
+              "--border-color": "rgba(74, 85, 104, 0.4)",
+              "--primary-color": "#D69E2E",
+              "--primary-hover": "#ECC94B",
+              "--secondary-color": "#4FD1C5",
+              "--secondary-hover": "#81E6D9",
+              "--xp-bar-fill": "linear-gradient(90deg, #D69E2E, #ECC94B)",
+              "--card-shadow": "0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2)",
+              "--card-shadow-hover": "0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.25)"
+          }
+      },
+      "solarpunk_oasis": { 
+          "id": "solarpunk_oasis", "name": "โอเอซิสโซลาร์พังก์", "price": 500, "isDefault": false, "isDark": false,
+          "variables": {
+              "--bg-color": "#F0F5F2",
+              "--surface-bg": "#FFFFFF",
+              "--text-primary": "#2C5234",
+              "--text-secondary": "#52725D",
+              "--border-color": "#D8E2DC",
+              "--primary-color": "#38A169",
+              "--primary-hover": "#2F855A",
+              "--secondary-color": "#DD6B20",
+              "--secondary-hover": "#C05621",
+              "--xp-bar-fill": "#F6AD55",
+              "--card-shadow": "0 4px 15px -3px rgba(44, 82, 52, 0.08)",
+              "--card-shadow-hover": "0 10px 20px -3px rgba(44, 82, 52, 0.12)"
+          }
+      },
+      "retro_arcade": { 
+          "id": "retro_arcade", "name": "เกมตู้อาร์เคด 8-Bit", "price": 400, "isDark": true,
+          "variables": {
+              "--bg-color": "#000000",
+              "--surface-bg": "#111111",
+              "--text-primary": "#FFFFFF",
+              "--text-secondary": "#AAAAAA",
+              "--border-color": "#33FF33", 
+              "--primary-color": "#FF00FF", 
+              "--primary-hover": "#FF33FF",
+              "--secondary-color": "#00FFFF",
+              "--secondary-hover": "#33FFFF",
+              "--xp-bar-fill": "#FFFF00",
+              "--card-shadow": "4px 4px 0px #33FF33",
+              "--card-shadow-hover": "6px 6px 0px #33FF33"
+          }
+      }
+  },
+  "soundShopItems": {
+      "default": { "id": "default", "name": "เสียงค่าเริ่มต้น", "price": 0, "isDefault": true, "sounds": { "tap": "sounds/click.mp3", "achievement": "sounds/success.mp3", "mission": "sounds/mission.mp3" } },
+      "jungle_rhythms": { "id": "jungle_rhythms", "name": "จังหวะป่า", "price": 150, "sounds": { "tap": "sounds/jungle_tap.mp3", "achievement": "sounds/jungle_success.mp3", "mission": "sounds/jungle_mission.mp3" } }
+  },
+  "missionTemplates": [
+      { "id": "tap_x_trees", "text": "กรีดยางให้ครบ {target} ต้นในรอบเดียว", "type": "session", "key": "tappedTrees", "reward": 50 },
+      { "id": "avg_time_under_x", "text": "ทำความเร็วเฉลี่ยต่ำกว่า {target} วินาที", "type": "session", "key": "avgTime", "comparison": "less", "reward": 75 },
+      { "id": "beat_last_avg", "text": "ทำเวลาให้ดีกว่ารอบที่แล้ว ({target} วิ/ต้น)", "type": "session", "key": "avgTime", "comparison": "less", "dynamicTarget": "lastAvgTime", "reward": 100 },
+      { "id": "session_over_x_min", "text": "กรีดยางต่อเนื่องนานกว่า {target} นาที", "type": "session", "key": "totalTime", "reward": 60 },
+      { "id": "perform_x_fusions", "text": "รวมต้นยางให้ครบ {target} ครั้ง", "type": "action", "key": "fusion_performed", "reward": 120 },
+      { "id": "own_x_rare_trees", "text": "มีต้นยางระดับหายาก {target} ต้นในสวน", "type": "cumulative", "key": "totalRareTrees", "reward": 150 },
+      { "id": "upgrade_any_tree", "text": "อัปเกรดต้นยางต้นใดก็ได้ {target} ครั้ง", "type": "action", "key": "tree_upgraded", "reward": 80 }
+    ],
+  "gameBalance": {
+      "BASE_XP_PER_LEVEL": 100,
+      "RECORD_BONUS_COINS": 25,
+      "DAILY_LOGIN_BASE_COINS": 10,
+      "DAILY_LOGIN_STREAK_INCREMENT": 5,
+      "LEVEL_UP_BASE_COINS": 50,
+      "LEVEL_UP_COINS_PER_LEVEL": 5,
+      "AI_GOAL_MIN_SESSIONS": 5,
+      "AI_GOAL_LOOKBACK_SESSIONS": 10,
+      "AI_GOAL_PERCENT_IMPROVEMENT": 0.98,
+      "AI_GOAL_MIN_TIME": 15,
+      "AI_GOAL_MAX_TIME": 60
+  },
+  "upgrades": {
+    "sharperKnife": {
+      "name": "มีดกรีดที่คมขึ้น",
+      "description": "ลดเวลาเฉลี่ยที่ต้องใช้ในการกรีดแต่ละต้นลงอย่างถาวร",
+      "icon": "sparkles",
+      "maxLevel": 10,
+      "baseCost": 150,
+      "costMultiplier": 1.8,
+      "effect": {
+        "type": "speed_boost_percent",
+        "baseValue": -0.005
+      }
+    },
+    "biggerBucket": {
+      "name": "ถังเก็บน้ำยางใหญ่ขึ้น",
+      "description": "เพิ่มค่าประสบการณ์ (XP) ที่ได้รับจากการกรีดยางในแต่ละรอบ",
+      "icon": "shopping-basket",
+      "maxLevel": 15,
+      "baseCost": 200,
+      "costMultiplier": 1.6,
+      "effect": {
+        "type": "xp_boost_percent",
+        "baseValue": 0.02
+      }
+    },
+    "betterTechnique": {
+      "name": "เทคนิคกรีดชั้นสูง",
+      "description": "เพิ่มจำนวนเหรียญโบนัสที่ได้รับจากการทำลายสถิติใหม่",
+      "icon": "gem",
+      "maxLevel": 5,
+      "baseCost": 500,
+      "costMultiplier": 2.5,
+      "effect": {
+        "type": "record_bonus_flat",
+        "baseValue": 10
+      }
+    }
+  },
+  "treeSpecies": {
+    "normal": { "name": "ต้นยางธรรมดา", "icon": "trees", "rarity": "Common", "maxLevel": 10, "baseGrowthTimeHours": 8, "baseExpPerLevel": 10, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 2, "special_sap": 1 }, "baseAttributes": { "coinYield": 0.05, "xpGain": 0.02 } },
+    "golden": { "name": "ต้นยางทองคำ", "icon": "tree-deciduous", "rarity": "Rare", "maxLevel": 15, "baseGrowthTimeHours": 16, "baseExpPerLevel": 15, "growthRate": 1.2, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 2, "gold_dust": 1 }, "baseAttributes": { "coinYield": 0.15, "xpGain": 0.05 } },
+    "resilient": { "name": "ต้นยางทนทาน", "icon": "shield-check", "rarity": "Rare", "maxLevel": 12, "baseGrowthTimeHours": 14, "baseExpPerLevel": 12, "growthRate": 1.15, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 1, "stone_fragment": 1 }, "baseAttributes": { "xpGain": 0.08 } },
+    "highyield": { "name": "ต้นยางผลผลิตสูง", "icon": "banknote", "rarity": "Epic", "maxLevel": 20, "baseGrowthTimeHours": 24, "baseExpPerLevel": 20, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 4, "special_sap": 3, "gold_dust": 1 }, "baseAttributes": { "coinYield": 0.25, "xpGain": 0.10 } },
+    "fastgrow": { "name": "ต้นยางโตไว", "icon": "timer", "rarity": "Uncommon", "maxLevel": 15, "baseGrowthTimeHours": 6, "baseExpPerLevel": 13, "growthRate": 1.3, "baseMaterialsNeeded": { "fertilizer": 3, "growth_serum": 1 }, "baseAttributes": { "growthRate": 0.10, "xpGain": 0.05 } }
+  },
+  "treeMaterials": {
+    "fertilizer": { "name": "ปุ๋ยพิเศษ", "icon": "hard-drive" },
+    "special_sap": { "name": "น้ำยางเข้มข้น", "icon": "droplets" },
+    "gold_dust": { "name": "ผงทองคำ", "icon": "gem" },
+    "stone_fragment": { "name": "เศษหินแกร่ง", "icon": "mountain" },
+    "growth_serum": { "name": "เซรุ่มเร่งโต", "icon": "flask-conical" }
+  },
+  "fusionRules": {
+    "materialCostMultiplier": 1.2, 
+    "attributeInheritanceChance": 0.7 
+  },
+  "dailyRewards": [
+    { "day": 1, "type": "coins", "amount": 20 },
+    { "day": 2, "type": "coins", "amount": 30 },
+    { "day": 3, "type": "material", "item": "fertilizer", "amount": 2 },
+    { "day": 4, "type": "coins", "amount": 50 },
+    { "day": 5, "type": "material", "item": "special_sap", "amount": 1 },
+    { "day": 6, "type": "coins", "amount": 75 },
+    { "day": 7, "type": "random_seed", "rarity": "Uncommon", "amount": 1 }
+  ]
+}

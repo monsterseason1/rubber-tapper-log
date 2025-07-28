@@ -41,8 +41,14 @@ function resetBreedingState(keepResultPanel = false) {
     selectedParentTree1Index = -1;
     selectedParentTree2Index = -1;
     
-    if (!keepResultPanel) {
+    if (!keepResultPanel && dom.breedingResultPanel) {
         dom.breedingResultPanel.classList.add('hidden');
+    }
+
+    // Guard Clause: Prevent crash if the main breeding slots element is not found
+    if (!dom.breedingSlots) {
+        console.error("Breeding slots container not found in DOM. Check if the element with id 'breeding-slots' exists.");
+        return;
     }
 
     // Reset slot appearances
@@ -111,7 +117,9 @@ function handleSlotClick(event) {
  */
 function updateBreedButtonState() {
     const allMaterialsAvailable = checkMaterialAvailability();
-    dom.breedTreeBtn.disabled = !(parentTree1 && parentTree2 && selectedParentTree1Index !== selectedParentTree2Index && allMaterialsAvailable);
+    if (dom.breedTreeBtn) {
+        dom.breedTreeBtn.disabled = !(parentTree1 && parentTree2 && selectedParentTree1Index !== selectedParentTree2Index && allMaterialsAvailable);
+    }
 }
 
 /**
@@ -249,6 +257,7 @@ function handleBreedTree() {
     setTimeout(() => {
         resetBreedingState(true);
         renderBreedingRequirements();
+        updateBreedButtonState(); // Ensure button state is correct after reset
     }, 500);
 }
 
@@ -359,15 +368,19 @@ function formatAttributeForDisplay(key, value) {
  * Sets up event listeners for the breeding screen.
  */
 function setupBreedingListeners() {
-    dom.breedTreeBtn.addEventListener('click', handleBreedTree);
+    if (dom.breedTreeBtn) {
+        dom.breedTreeBtn.addEventListener('click', handleBreedTree);
+    }
     const receiveSeedlingBtn = dom.breedingResultPanel?.querySelector('button.btn-success');
     if (receiveSeedlingBtn) {
         receiveSeedlingBtn.addEventListener('click', handleReceiveSeedling);
     }
-    const slots = dom.breedingSlots.querySelectorAll('.slot-content');
-    slots.forEach(slot => {
-        slot.addEventListener('click', handleSlotClick);
-    });
+    const slots = dom.breedingSlots?.querySelectorAll('.slot-content');
+    if (slots) {
+        slots.forEach(slot => {
+            slot.addEventListener('click', handleSlotClick);
+        });
+    }
 }
 
 /**
@@ -376,6 +389,7 @@ function setupBreedingListeners() {
 function handleReceiveSeedling() {
     resetBreedingState(false);
     renderBreedingRequirements();
+    updateBreedButtonState();
     if (dom.plantationScreen.classList.contains('active')) {
         renderPlantation();
     }

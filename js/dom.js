@@ -215,9 +215,9 @@ export const breedingResultPanel = document.getElementById('breeding-result-pane
 export const bredTreeSpecies = document.getElementById('bred-tree-species');
 export const bredTreeAttributes = document.getElementById('bred-tree-attributes');
 export const materialForBreedingList = document.getElementById('material-for-breeding-list');
-// --- START: Re-added missing button export ---
-export const goToBeedingBtn = document.getElementById('go-to-breeding-btn'); 
-// --- END: Re-added missing button export ---
+// --- START: Removed unnecessary button export ---
+// export const goToBeedingBtn = document.getElementById('go-to-breeding-btn'); 
+// --- END: Removed unnecessary button export ---
 export const backToMainFromPlantationBtn = document.getElementById('back-to-main-from-plantation-btn');
 export const backToMainFromBreedingBtn = document.getElementById('back-to-main-from-breeding-btn');
 

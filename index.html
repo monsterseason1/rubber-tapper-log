@@ -443,8 +443,63 @@
                     <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="sprout"><path d="M7 20h10"></path><path d="M10 20c-.5-2.5-.5-5 0-7.5-1-1-1.5-2.5-1-4C10 6.5 11 8 12 8s2-1.5 2-2.5c.5 1.5 0 3-1 4 .5 2.5.5 5 0 7.5"></path></svg> สวนยางของฉัน</h2><p>จัดการ ดูแล และอัปเกรดต้นยางทั้งหมดของคุณ</p></div>
                     <div id="plantation-grid" class="tree-grid"></div>
                     <div class="screen-footer">
-                        <button id="go-to-breeding-btn" class="btn btn-primary">ไปที่การรวมต้นยาง</button>
                         <button id="back-to-main-from-plantation-btn" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+                <!-- Panel for displaying Tree Info -->
+                <div id="tree-info-backdrop" class="info-panel-backdrop"></div>
+                <div id="tree-info-panel" class="tree-detail-panel">
+                    <div class="tree-info-header">
+                        <h4>ข้อมูลต้นยาง</h4>
+                        <button id="close-tree-info-btn" class="btn-close"><i data-lucide="x"></i></button>
+                    </div>
+                    <div class="tree-info-body">
+                        <div class="tree-basic-info">
+                            <div class="tree-icon"><i data-lucide="trees"></i></div>
+                            <div class="tree-stats">
+                                <h4 id="selected-tree-name">ชื่อต้นยาง</h4>
+                                <p id="selected-tree-species">ความหายาก</p>
+                                <p>Level: <span id="selected-tree-level">1</span> / <span id="selected-tree-max-level">10</span></p>
+                            </div>
+                        </div>
+
+                        <div class="tree-exp-display">
+                            <h5><i data-lucide="bar-chart-2"></i> ค่าประสบการณ์ (EXP)</h5>
+                            <progress id="tree-exp-bar" value="50" max="100"></progress>
+                            <p class="progress-label"><span id="selected-tree-exp">50</span> / <span id="selected-tree-exp-next">100</span></p>
+                        </div>
+
+                        <div class="tree-attributes-display">
+                            <h5><i data-lucide="gem"></i> คุณสมบัติพิเศษ</h5>
+                            <ul id="tree-attributes" class="attribute-list"></ul>
+                        </div>
+
+                        <div class="tree-materials-display">
+                            <h5><i data-lucide="wrench"></i> วัตถุดิบสำหรับอัปเกรด</h5>
+                            <ul id="tree-materials-list" class="material-list"></ul>
+                        </div>
+
+                        <div class="tree-actions">
+                            <button id="upgrade-tree-btn" class="btn btn-primary"><i data-lucide="hammer"></i>อัปเกรด</button>
+                            <button id="activate-tree-btn" class="btn btn-secondary"><i data-lucide="power"></i>เปิดใช้งาน</button>
+                            <button id="sell-tree-btn" class="btn btn-danger"><i data-lucide="tag"></i>ขาย</button>
+                        </div>
+
+                        <div class="tree-plant-action">
+                            <div id="seed-plant-section">
+                                <p id="plant-action-description">คำอธิบาย</p>
+                                <button id="plant-tree-btn" class="btn btn-primary"><i data-lucide="shovel"></i>ปลูกเมล็ดพันธุ์</button>
+                            </div>
+                            <div id="seedling-care-section">
+                                 <p>เวลาที่เหลือจนกว่าจะโตเต็มวัย:</p>
+                                 <strong id="growth-countdown">00:00:00</strong>
+                                 <div id="care-actions" class="care-actions">
+                                    <button id="water-tree-btn" class="btn btn-secondary"><i data-lucide="cloud-drizzle"></i>รดน้ำ</button>
+                                    <button id="fertilize-tree-btn" class="btn btn-secondary"><i data-lucide="leaf"></i>ให้ปุ๋ย</button>
+                                 </div>
+                                 <button id="grow-tree-btn" class="btn btn-success"><i data-lucide="sparkles"></i>โตเต็มวัย!</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -452,7 +507,7 @@
             <section id="breeding-screen" class="screen">
                 <div class="screen-content">
                     <div class="screen-header"><h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="flask-conical"><path d="M10 2v7.31"></path><path d="M14 9.31V2"></path><path d="M10 13.31C10 14.5 10.83 16 12 16a2 2 0 0 0 2-2.69"></path><path d="m3.17 7.31.29.29a2 2 0 0 0 2.83 0L8 6l2 2-2.5 2.5a2 2 0 0 0 0 2.83l.29.29"></path><path d="m14.5 11.83 1.25-1.25a2 2 0 0 0 0-2.83l-.29-.29a2 2 0 0 0-2.83 0L12 8l-2-2 1.17-1.17a2 2 0 0 1 2.83 0L16 6.5l-1.5 1.5"></path><path d="M8.25 20.69 7.3 21.64a2 2 0 0 0 0 2.82l2.83 2.83a2 2 0 0 0 2.82 0l.96-.96"></path><path d="M10.29 18.64c.19-.19.44-.3.71-.3h1c.26 0 .51.11.7.3"></path><path d="M12.71 16.64c.19.19.44.3.7.3h1c.27 0 .52-.11.71-.3"></path></svg> รวมต้นยาง (Breeding)</h2><p>รวมต้นยาง 2 ต้นเพื่อลุ้นรับต้นใหม่ที่แข็งแกร่งกว่าเดิม!</p></div>
-                    <div class="breeding-slots">
+                    <div id="breeding-slots" class="breeding-slots">
                         <div class="slot">
                             <h4 class="slot-header">ต้นที่ 1</h4>
                             <div class="slot-content placeholder" data-slot-index="0"><i data-lucide="sprout"></i><p>เลือกต้นยาง</p></div>
@@ -500,63 +555,6 @@
                     </div>
                 </div>
             </section>
-
-             <!-- Panel for displaying Tree Info -->
-            <div id="tree-info-backdrop" class="info-panel-backdrop"></div>
-            <div id="tree-info-panel" class="tree-detail-panel">
-                <div class="tree-info-header">
-                    <h4>ข้อมูลต้นยาง</h4>
-                    <button id="close-tree-info-btn" class="btn-close"><i data-lucide="x"></i></button>
-                </div>
-                <div class="tree-info-body">
-                    <div class="tree-basic-info">
-                        <div class="tree-icon"><i data-lucide="trees"></i></div>
-                        <div class="tree-stats">
-                            <h4 id="selected-tree-name">ชื่อต้นยาง</h4>
-                            <p id="selected-tree-species">ความหายาก</p>
-                            <p>Level: <span id="selected-tree-level">1</span> / <span id="selected-tree-max-level">10</span></p>
-                        </div>
-                    </div>
-
-                    <div class="tree-exp-display">
-                        <h5><i data-lucide="bar-chart-2"></i> ค่าประสบการณ์ (EXP)</h5>
-                        <progress id="tree-exp-bar" value="50" max="100"></progress>
-                        <p class="progress-label"><span id="selected-tree-exp">50</span> / <span id="selected-tree-exp-next">100</span></p>
-                    </div>
-
-                    <div class="tree-attributes-display">
-                        <h5><i data-lucide="gem"></i> คุณสมบัติพิเศษ</h5>
-                        <ul id="tree-attributes" class="attribute-list"></ul>
-                    </div>
-
-                    <div class="tree-materials-display">
-                        <h5><i data-lucide="wrench"></i> วัตถุดิบสำหรับอัปเกรด</h5>
-                        <ul id="tree-materials-list" class="material-list"></ul>
-                    </div>
-
-                    <div class="tree-actions">
-                        <button id="upgrade-tree-btn" class="btn btn-primary"><i data-lucide="hammer"></i>อัปเกรด</button>
-                        <button id="activate-tree-btn" class="btn btn-secondary"><i data-lucide="power"></i>เปิดใช้งาน</button>
-                        <button id="sell-tree-btn" class="btn btn-danger"><i data-lucide="tag"></i>ขาย</button>
-                    </div>
-
-                    <div class="tree-plant-action">
-                        <div id="seed-plant-section">
-                            <p id="plant-action-description">คำอธิบาย</p>
-                            <button id="plant-tree-btn" class="btn btn-primary"><i data-lucide="shovel"></i>ปลูกเมล็ดพันธุ์</button>
-                        </div>
-                        <div id="seedling-care-section">
-                             <p>เวลาที่เหลือจนกว่าจะโตเต็มวัย:</p>
-                             <strong id="growth-countdown">00:00:00</strong>
-                             <div id="care-actions" class="care-actions">
-                                <button id="water-tree-btn" class="btn btn-secondary"><i data-lucide="cloud-drizzle"></i>รดน้ำ</button>
-                                <button id="fertilize-tree-btn" class="btn btn-secondary"><i data-lucide="leaf"></i>ให้ปุ๋ย</button>
-                             </div>
-                             <button id="grow-tree-btn" class="btn btn-success"><i data-lucide="sparkles"></i>โตเต็มวัย!</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
         </main>
         

@@ -402,15 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dom.fertilizeTreeBtn) dom.fertilizeTreeBtn.addEventListener('click', handleFertilizeTree);
     if (dom.growTreeBtn) dom.growTreeBtn.addEventListener('click', handleGrowTree);
 
-    // --- START: Re-instated Event Listener with a null check ---
-    if (dom.goToBeedingBtn) {
-        dom.goToBeedingBtn.addEventListener('click', () => {
-            initializeBreedingScreen();
-            showScreen(dom.breedingScreen);
-        });
-    }
-    // --- END: Re-instated Event Listener ---
-
     if (dom.sellTreeBtn) {
         dom.sellTreeBtn.addEventListener('click', () => {
             if (selectedTreeInstance) {

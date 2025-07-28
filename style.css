@@ -1320,10 +1320,6 @@ p.current-goal-value span {
     border-color: color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
-.mission-card.completed .mission-icon {
-    color: var(--success-color);
-}
-
 .mission-card.completed h4, .mission-card.completed p {
     text-decoration: line-through;
     color: var(--subtle-text-color);
@@ -1714,4 +1710,457 @@ p.current-goal-value span {
     margin: 0 1rem 1rem 1rem;
     width: calc(100% - 2rem);
 }
-/* --- END OF FILE style.css --- */
+
+/* --- Plantation & Breeding & Marketplace --- */
+.tree-grid, .upgrades-container, .tree-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+.upgrades-container {
+    grid-template-columns: 1fr;
+}
+.plantation-placeholder {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+}
+.plantation-placeholder i {
+    width: 48px;
+    height: 48px;
+    color: var(--subtle-text-color);
+    margin-bottom: 1rem;
+}
+.tree-card {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    background-color: var(--container-bg);
+}
+.tree-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--card-shadow-hover);
+}
+.tree-card.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 40%, transparent);
+}
+.active-tree-indicator {
+    position: absolute;
+    top: 8px; right: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    z-index: 2;
+}
+.dark-mode .active-tree-indicator {
+    color: var(--container-bg);
+}
+.stage-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    z-index: 2;
+    color: white;
+}
+.stage-badge.seed { background-color: var(--stage-seed-color); }
+.stage-badge.seedling { background-color: var(--stage-seedling-color); }
+
+.tree-card-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+.tree-card-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    min-height: 80px; /* Ensure footer has space */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tree-card .tree-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+.tree-card h4 { margin-bottom: 0.25rem; }
+.tree-card p { margin: 0; font-size: 0.875rem; color: var(--subtle-text-color); }
+
+.tree-exp-bar-container {
+    height: 6px;
+    width: 80%;
+    margin: 0.5rem auto 0;
+    background-color: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.tree-exp-bar {
+    height: 100%;
+    background-color: var(--xp-bar-fill);
+    transition: width 0.3s ease;
+}
+.tree-exp-label {
+    font-size: 0.75rem !important;
+    margin-top: 0.25rem !important;
+}
+.tree-info-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+.ready-to-plant { color: var(--success-color); }
+.growth-countdown.ready-to-grow { color: var(--primary-color); animation: pulse 1.5s infinite; }
+
+/* Rarity Colors */
+.rarity-common { border-left: 4px solid var(--rarity-common-color); }
+.rarity-uncommon { border-left: 4px solid var(--rarity-uncommon-color); }
+.rarity-rare { border-left: 4px solid var(--rarity-rare-color); }
+.rarity-epic { border-left: 4px solid var(--rarity-epic-color); }
+.rarity-legendary { border-left: 4px solid var(--rarity-legendary-color); }
+.tree-card.seed { border-left: 4px solid var(--stage-seed-color); }
+.tree-card.seedling { border-left: 4px solid var(--stage-seedling-color); }
+
+.info-panel-backdrop {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.info-panel-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.tree-detail-panel {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 100%;
+    max-width: 800px;
+    left: 50%;
+    transform: translate(-50%, 100%);
+    background-color: var(--container-bg);
+    border-top: 1px solid var(--border-color);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 30px -5px rgba(0,0,0,0.2);
+    z-index: 51;
+    transition: transform 0.3s ease;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+.tree-detail-panel.visible {
+    transform: translate(-50%, 0);
+}
+.tree-info-header {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.tree-info-header h4 {
+    margin: 0;
+}
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+    padding: 0.5rem;
+}
+.tree-info-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+.tree-basic-info {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+.tree-basic-info .tree-icon {
+    font-size: 4rem;
+    color: var(--primary-color);
+}
+.tree-stats h4, .tree-stats p { margin: 0; }
+.tree-info-body h5 {
+    font-size: 1rem;
+    margin: 1.5rem 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.attribute-list, .material-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.attribute-list li, .material-list li {
+    background-color: var(--bg-color);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.tree-actions {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+#activate-tree-btn.active {
+    background-color: var(--success-color);
+    color: white;
+}
+.tree-plant-action {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+.tree-plant-action #growth-countdown {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0.5rem 0 1rem 0;
+}
+.care-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Breeding Screen */
+.breeding-slots {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+.slot { text-align: center; }
+.slot-content {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.slot-content:hover {
+    border-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.slot-content i {
+    width: 48px;
+    height: 48px;
+    color: var(--subtle-text-color);
+}
+.slot-content.selected {
+    border-style: solid;
+    border-color: var(--primary-color);
+}
+.slot-content.selected h4 { margin-top: 0.5rem; margin-bottom: 0.25rem; }
+.slot-content.selected p { font-size: 0.8rem; }
+#material-for-breeding-list {
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+#material-for-breeding-list h5 { margin-bottom: 0.5rem; }
+#material-for-breeding-list ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+#material-for-breeding-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.breeding-result-panel {
+    border: 1px solid var(--success-color);
+    background-color: color-mix(in srgb, var(--success-color) 10%, transparent);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+.breeding-result-panel.anim-reveal {
+    animation: fadeIn 0.5s ease-out;
+}
+.result-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-align: left;
+    margin: 1rem 0;
+}
+.result-content i {
+    font-size: 3rem;
+    color: var(--success-color);
+}
+
+/* Tree Selection Modal */
+.modal-header {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h2 { margin: 0; font-size: 1.25rem; }
+#tree-selection-list {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+.tree-selection-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+.tree-selection-card:hover {
+    border-color: var(--primary-color);
+    background-color: var(--bg-color);
+}
+.tree-selection-card.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: var(--bg-color);
+}
+.tree-selection-card .tree-icon { font-size: 2rem; }
+.tree-selection-card h4, .tree-selection-card p { margin: 0; }
+.stage-badge-small {
+    position: absolute;
+    top: 4px; left: 4px;
+    padding: 0.1rem 0.4rem;
+    border-radius: 1rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    z-index: 2;
+    color: white;
+}
+.stage-badge-small.seed { background-color: var(--stage-seed-color); }
+.stage-badge-small.seedling { background-color: var(--stage-seedling-color); }
+
+/* Marketplace */
+.market-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+.market-tabs .btn {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background-color: transparent;
+    color: var(--subtle-text-color);
+    position: relative;
+    top: 1px;
+}
+.market-tabs .btn.active {
+    background-color: var(--container-bg);
+    color: var(--primary-color);
+    border-color: var(--border-color);
+    font-weight: 700;
+}
+.market-section { display: none; }
+.market-section.active { display: block; }
+.tree-card .tree-attributes-preview {
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    color: var(--subtle-text-color);
+}
+.tree-card .btn-buy {
+    margin: 1rem auto 0;
+}
+.sell-modal-info .tree-card {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+    cursor: default;
+}
+.sell-modal-info .tree-card:hover {
+    transform: none;
+    box-shadow: none;
+}
+.sell-pricing {
+    padding: 1.5rem;
+}
+.price-details {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+/* Sale Modal */
+#sale-modal-result-view h2 { margin-top: 1rem; }
+#sale-modal-result-view .summary-card {
+    border-radius: 12px;
+}
+
+/* Upgrades Screen */
+.upgrades-container .upgrade-card {
+    display: grid;
+    grid-template-areas:
+        "icon details action"
+        "icon progress action";
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--container-bg);
+}
+.upgrade-card.maxed-out {
+    background-color: color-mix(in srgb, var(--success-color) 5%, transparent);
+}
+.upgrade-icon { grid-area: icon; font-size: 2rem; color: var(--primary-color); }
+.upgrade-details { grid-area: details; }
+.upgrade-details h4 { margin-bottom: 0.25rem; }
+.upgrade-details p { margin: 0; font-size: 0.9rem; }
+.upgrade-progress { grid-area: progress; display: flex; flex-direction: column; gap: 0.25rem; }
+.upgrade-progress span { font-size: 0.8rem; color: var(--subtle-text-color); }
+.upgrade-action { grid-area: action; }

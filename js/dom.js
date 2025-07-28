@@ -31,6 +31,7 @@ export const upgradesScreen = document.getElementById('upgrades-screen');
 export const plantationScreen = document.getElementById('plantation-screen');
 export const breedingScreen = document.getElementById('breeding-screen');
 export const marketplaceScreen = document.getElementById('marketplace-screen');
+export const activeTappingScreen = document.getElementById('active-tapping-screen');
 
 
 // --- Header ---
@@ -76,28 +77,26 @@ export const dailyLoginStreakSpan = document.getElementById('daily-login-streak'
 export const dailyLoginRewardSpan = document.getElementById('daily-login-reward');
 
 
-// --- Tapping Screen & Real-time Pacing Guide ---
+// --- Tapping Screen (Prep Screen) & Real-time Stats ---
 export const currentTreeNumberSpan = document.getElementById('current-tree-number');
 export const totalTreesDisplaySpan = document.getElementById('total-trees-display');
 export const timerSpan = document.getElementById('timer');
 export const progressBar = document.getElementById('progress-bar');
-export const nextTreeBtn = document.getElementById('next-tree-btn');
+export const startTappingTreeBtn = document.getElementById('start-tapping-tree-btn');
 export const endSessionBtn = document.getElementById('end-session-btn');
 export const endSessionFullBtn = document.getElementById('end-session-full-btn');
-export const pauseSessionBtn = document.getElementById('pause-session-btn');
-export const pacingIndicator = document.getElementById('pacing-indicator');
-export const pacingStatus = document.getElementById('pacing-status');
-export const pacingTimeDiff = document.getElementById('pacing-time-diff');
-export const realTimeStatsContainer = document.getElementById('real-time-stats-container');
-export const rtAvgTimeSpan = document.getElementById('rt-avg-time');
-export const rtLapTimeSpan = document.getElementById('rt-lap-time');
-export const rtSessionLootContainer = document.getElementById('rt-session-loot-container');
-export const pauseOverlay = document.getElementById('pause-overlay');
-export const tappingHeader = document.querySelector('.tapping-header');
-export const tappingFooter = document.querySelector('.tapping-footer');
-export const pauseSessionBtnDesktop = document.getElementById('pause-session-btn-desktop');
 export const endSessionBtnDesktop = document.getElementById('end-session-btn-desktop');
 export const endSessionFullBtnDesktop = document.getElementById('end-session-full-btn-desktop');
+export const rtSessionLootContainer = document.getElementById('rt-session-loot-container');
+// New elements for real-time stats
+export const rtAvgTimeSpan = document.getElementById('rt-avg-time');
+export const rtLastLapTimeSpan = document.getElementById('rt-last-lap-time');
+export const rtPacingIcon = document.getElementById('rt-pacing-icon');
+
+// --- Active Tapping Screen Elements ---
+export const activeTapZone = document.getElementById('active-tap-zone');
+export const activeTapTreeNumber = document.getElementById('active-tap-tree-number');
+export const activeRtAvgTimeSpan = document.getElementById('active-rt-avg-time');
 
 
 // --- Summary Screen & AI Pacing Analysis ---
@@ -215,9 +214,6 @@ export const breedingResultPanel = document.getElementById('breeding-result-pane
 export const bredTreeSpecies = document.getElementById('bred-tree-species');
 export const bredTreeAttributes = document.getElementById('bred-tree-attributes');
 export const materialForBreedingList = document.getElementById('material-for-breeding-list');
-// --- START: Removed unnecessary button export ---
-// export const goToBeedingBtn = document.getElementById('go-to-breeding-btn'); 
-// --- END: Removed unnecessary button export ---
 export const backToMainFromPlantationBtn = document.getElementById('back-to-main-from-plantation-btn');
 export const backToMainFromBreedingBtn = document.getElementById('back-to-main-from-breeding-btn');
 
@@ -258,6 +254,3 @@ export const saleModalResultView = document.getElementById('sale-modal-result-vi
 export const saleResultPricePerKg = document.getElementById('sale-result-price-per-kg');
 export const saleResultEstIncome = document.getElementById('sale-result-est-income');
 export const saleResultNewSaleBtn = document.getElementById('sale-result-new-sale-btn');
-
-
-// --- END OF FILE dom.js ---

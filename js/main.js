@@ -39,7 +39,7 @@ import {
     showDailyRewardModal,
     hideDailyRewardModal
 } from './ui.js';
-import { startSession, handleNextTree, endSession, togglePauseSession } from './session.js';
+import { startSession, initiateTreeTap, finalizeTreeTap, endSession } from './session.js';
 import { generateNewMissions } from './missions.js'; 
 import { grantCoins, setAIGoal, getAITreeSuggestion } from './analysis.js';
 import { loadGameData, gameData } from './gameDataService.js';
@@ -71,11 +71,11 @@ async function initializeApp() {
         updateGoalDisplay();
         updateAnimationToggle();
         
-        setAISuggestedTreeCount(true); 
+        adjustSetupScreenForUser(); // Let UI function handle UI state
 
         setupEventListeners();
         setupSaleModalListeners();
-        showScreen(dom.setupScreen);
+        showScreen(dom.setupScreen, true); // Add flag to hide header on initial load
         lucide.createIcons();
     } catch (error) {
         console.error("Failed to initialize app: Game data could not be loaded.", error);
@@ -86,19 +86,6 @@ async function initializeApp() {
                 <p>Error: ${error.message}</p>
             </div>
         `;
-    }
-}
-
-/**
- * Gets AI suggestion and shows a notification toast.
- */
-function setAISuggestedTreeCount(showNotification = false) {
-    const suggestedTrees = getAITreeSuggestion();
-    
-    if (showNotification && (state.sessionHistory.length >= 3 || state.plantationSize)) {
-        setTimeout(() => {
-             showToast({ title: `💡 AI แนะนำ: กรีด ${suggestedTrees} ต้น (${state.plantationSize ? 'เต็มสวน' : 'เฉลี่ย'})`, lucideIcon: 'lightbulb' });
-        }, 1000);
     }
 }
 
@@ -202,20 +189,28 @@ function handleClaimReward() {
     hideDailyRewardModal();
 }
 
-
+/**
+ * Handles the start session button click.
+ * This function determines the goal and initiates the session.
+ */
 function handleStartSession() {
     const isNewUser = !state.sessionHistory || state.sessionHistory.length === 0;
     let treeCountGoal;
 
     if (isNewUser) {
-        treeCountGoal = 50;
+        // For new users, set a fixed starting goal.
+        treeCountGoal = 50; 
         showToast({ title: 'เยี่ยมเลย! มาเริ่มบันทึก 50 ต้นแรกกัน', lucideIcon: 'rocket' });
     } else {
+        // For existing users, get the AI-suggested goal.
         treeCountGoal = getAITreeSuggestion();
+        showToast({ title: `💡 AI แนะนำ: กรีด ${treeCountGoal} ต้น`, lucideIcon: 'lightbulb' });
     }
     
+    // Pass the determined goal to the session logic.
     startSession(treeCountGoal);
 }
+
 
 /**
  * Sets up all the event listeners for the entire application.
@@ -223,19 +218,14 @@ function handleStartSession() {
 function setupEventListeners() {
     // --- Session Control ---
     dom.startSessionBtn.addEventListener('click', handleStartSession);
-    dom.nextTreeBtn.addEventListener('click', handleNextTree);
-    
-    // START: Attach listeners to both mobile and desktop buttons
+    dom.startTappingTreeBtn.addEventListener('click', initiateTreeTap);
+    dom.activeTapZone.addEventListener('click', finalizeTreeTap);
+
     dom.endSessionBtn.addEventListener('click', () => endSession(false));
     dom.endSessionFullBtn.addEventListener('click', () => endSession(true));
-    dom.pauseSessionBtn.addEventListener('click', togglePauseSession);
-
     dom.endSessionBtnDesktop.addEventListener('click', () => endSession(false));
     dom.endSessionFullBtnDesktop.addEventListener('click', () => endSession(true));
-    dom.pauseSessionBtnDesktop.addEventListener('click', togglePauseSession);
-    // END: Attach listeners
     
-    dom.pauseOverlay.addEventListener('click', togglePauseSession);
     dom.newSessionBtn.addEventListener('click', () => {
         loadState(); 
         setAIGoal();
@@ -243,7 +233,7 @@ function setupEventListeners() {
         updateUserProfile(); 
         updateUserCoinBalance();
         generateNewMissions(); 
-        setAISuggestedTreeCount(false);
+        adjustSetupScreenForUser(); // Re-adjust UI for the new session
         showScreen(dom.setupScreen);
     });
 
@@ -514,5 +504,3 @@ function resetAllData() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
-
-// --- END OF FILE main.js ---

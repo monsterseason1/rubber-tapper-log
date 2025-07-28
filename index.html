@@ -202,55 +202,72 @@
             </section>
 
             <section id="tapping-screen" class="screen">
-                <div id="pause-overlay" class="pause-overlay hidden">
-                    <div class="pause-content">
-                        <i data-lucide="cup-soda"></i>
-                        <h2>หยุดพักชั่วคราว</h2>
-                        <p>กดปุ่ม "ทำต่อ" หรือแตะที่ใดก็ได้เพื่อกรีดต่อ</p>
-                    </div>
-                </div>
                 <div class="screen-content tapping-layout">
                     <div class="tapping-header">
                         <div class="stats-grid">
-                            <div class="stat-card"><h3>ต้นที่</h3><p><span id="current-tree-number">1</span> / <span id="total-trees-display">100</span></p></div>
-                            <div class="stat-card"><h3>เวลาทั้งหมด</h3><p id="timer">00:00:00</p></div>
+                            <div class="stat-card">
+                                <h3>ต้นที่</h3>
+                                <p><span id="current-tree-number">1</span>/<span id="total-trees-display">100</span></p>
+                            </div>
+                            <div class="stat-card">
+                                <h3>เวลาทั้งหมด</h3>
+                                <p id="timer">00:00:00</p>
+                            </div>
+                            <!-- NEW: Real-time stat cards -->
+                            <div class="stat-card">
+                                <h3>เฉลี่ย (วิ/ต้น)</h3>
+                                <p id="rt-avg-time">0.00</p>
+                            </div>
+                            <div class="stat-card" id="last-lap-stat-card">
+                                <h3>ต้นล่าสุด (วิ)</h3>
+                                <p class="pacing-value">
+                                    <span id="rt-pacing-icon"></span>
+                                    <span id="rt-last-lap-time">0.00</span>
+                                </p>
+                            </div>
                         </div>
-                        <div id="progress-container"><div id="progress-bar"></div></div>
+                        <div id="progress-container">
+                            <div id="progress-bar" style="width: 0%;"></div>
+                        </div>
                     </div>
 
                     <div id="main-tap-action-area">
-                        <button id="next-tree-btn" class="btn-tap">
+                        <button id="start-tapping-tree-btn" class="btn-tap">
                             <i data-lucide="axe"></i>
-                            <span>กรีด</span>
+                            <span>กรีดต้นที่ 1</span>
                         </button>
-                        <div class="tapping-secondary-actions-mobile">
-                             <button id="pause-session-btn" class="btn btn-secondary" disabled=""><i data-lucide="pause"></i> หยุดพัก</button>
-                            <button id="end-session-btn" class="btn btn-secondary"><i data-lucide="flag"></i> สิ้นสุด</button>
-                            <button id="end-session-full-btn" class="btn btn-primary"><i data-lucide="check-check"></i> เต็มสวน</button>
-                        </div>
                     </div>
                     
                     <div class="tapping-footer">
-                        <div id="real-time-stats-container" class="stats-grid hidden">
-                            <div class="stat-card"><h3>เฉลี่ย (วิ/ต้น)</h3><p id="rt-avg-time">0.00</p></div>
-                            <div class="stat-card"><h3>เวลาต้นนี้ (วิ)</h3><p id="rt-lap-time">0.00</p></div>
+                        <div id="rt-session-loot-container" class="session-loot-display">
+                            <p class="no-loot-text">ยังไม่พบไอเทมในรอบนี้</p>
                         </div>
-    
-                        <div id="pacing-indicator" class="pacing-card">
-                            <div class="pacing-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="gauge-circle" class="lucide lucide-gauge-circle"><path d="M15.6 2.7a10 10 0 1 0 5.7 5.7"></path><circle cx="12" cy="12" r="2"></circle><path d="M13.4 10.6 19 5"></path></svg></div>
-                            <div class="pacing-text">
-                                <span id="pacing-status">เทียบสถิติดีที่สุด</span>
-                                <strong id="pacing-time-diff">-0.54s</strong>
-                            </div>
+                        <div class="tapping-secondary-actions-desktop">
+                            <button id="end-session-btn-desktop" class="btn btn-secondary"><i data-lucide="flag"></i> สิ้นสุด</button>
+                            <button id="end-session-full-btn-desktop" class="btn btn-primary"><i data-lucide="check-check"></i> เต็มสวน</button>
                         </div>
-    
-                        <div class="action-area">
-                            <div id="rt-session-loot-container" class="session-loot-display"></div>
-                            <div class="tapping-secondary-actions-desktop">
-                                <button id="pause-session-btn-desktop" class="btn btn-secondary" disabled=""><i data-lucide="pause"></i> หยุดพัก</button>
-                                <button id="end-session-btn-desktop" class="btn btn-secondary">สิ้นสุด (บางส่วน)</button>
-                                <button id="end-session-full-btn-desktop" class="btn btn-primary">สิ้นสุด (เต็มสวน)</button>
-                            </div>
+                    </div>
+                    <!-- Mobile buttons are now placed here for better layout control if needed in the future -->
+                    <div class="tapping-secondary-actions-mobile">
+                        <button id="end-session-btn" class="btn btn-secondary"><i data-lucide="flag"></i> สิ้นสุด</button>
+                        <button id="end-session-full-btn" class="btn btn-primary"><i data-lucide="check-check"></i> เต็มสวน</button>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="active-tapping-screen" class="screen">
+                <div id="active-tap-zone" class="active-tap-zone">
+                    <div class="active-tap-header">
+                        <h2>กรีดต้นที่ <span id="active-tap-tree-number">12</span></h2>
+                        <p>แตะที่ใดก็ได้เพื่อสิ้นสุดการกรีดต้นนี้</p>
+                    </div>
+                    <div class="active-tap-visualizer">
+                        <i data-lucide="mouse-pointer-click"></i>
+                    </div>
+                    <div class="active-tap-footer">
+                        <div class="stat-card">
+                            <h3>เฉลี่ย (วิ/ต้น)</h3>
+                            <p id="active-rt-avg-time">0.00</p>
                         </div>
                     </div>
                 </div>
@@ -575,6 +592,7 @@
     <script type="module" src="js/upgrades.js"></script>
     <script type="module" src="js/breeding.js"></script>
     <script type="module" src="js/plantation.js"></script> 
+    <script type="module" src="js/marketplace.js"></script>
     <script type="module" src="js/main.js" defer=""></script> 
     
     <script>

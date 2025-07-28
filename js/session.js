@@ -1,4 +1,4 @@
-// --- START OF FILE session.js ---
+// --- START OF FILE js/session.js ---
 
 /*
 ======================================
@@ -13,11 +13,11 @@ import {
     showScreen, 
     formatTime, 
     showToast, 
-    updateProgressBar, 
     updateUserProfile, 
     updateUserCoinBalance,
     animateCoins,
-    renderSessionLoot
+    renderSessionLoot,
+    updateTappingScreenUI
 } from './ui.js'; 
 import { getAIInsight, getPacingAnalysis, checkAchievementCoinRewards, grantCoins, setAIGoal, grantXp } from './analysis.js';
 import { checkMissionCompletion } from './missions.js'; 
@@ -75,71 +75,19 @@ function checkAchievements(sessionStats) {
     return newlyUnlockedKeys;
 }
 
-
-/**
- * Toggles the pause state of the current session.
- */
-export function togglePauseSession() {
-    sessionState.isPaused = !sessionState.isPaused;
-
-    if (sessionState.isPaused) {
-        // Pausing the game
-        sessionState.pauseStartTime = Date.now();
-        stopTimers(); // Stop all timers
-        dom.pauseOverlay.classList.remove('hidden');
-        dom.pauseSessionBtn.innerHTML = '<i data-lucide="play"></i> ทำต่อ';
-    } else {
-        // Resuming the game
-        const pauseDuration = Date.now() - sessionState.pauseStartTime;
-        sessionState.totalPauseDuration += pauseDuration;
-        
-        // Adjust the lap start time to account for the pause.
-        if (sessionState.lapStartTime) {
-            sessionState.lapStartTime += pauseDuration;
-        }
-        
-        startTimers(); // Restart all timers
-        dom.pauseOverlay.classList.add('hidden');
-        dom.pauseSessionBtn.innerHTML = '<i data-lucide="pause"></i> หยุดพัก';
-    }
-    lucide.createIcons({nodes: [dom.pauseSessionBtn.querySelector('i')]});
-}
-
-
-/**
- * Updates the real-time average time display.
- */
-function updateRealTimeStats() {
-    if (sessionState.tappedTrees > 0) {
-        const elapsedSeconds = (Date.now() - sessionState.startTime - sessionState.totalPauseDuration) / 1000;
-        sessionState.currentAvgTime = elapsedSeconds / sessionState.tappedTrees;
-        dom.rtAvgTimeSpan.textContent = sessionState.currentAvgTime.toFixed(2);
-    } else {
-        dom.rtAvgTimeSpan.textContent = "0.00";
-    }
-}
-
 /**
  * Starts all session timers (main and lap).
  */
 function startTimers() {
     stopTimers(); // Ensure no multiple timers are running
 
-    // Main Timer
+    // Main Timer for total elapsed time
     sessionState.timerInterval = setInterval(() => {
-        if (!sessionState.isPaused) {
-            const elapsedSeconds = (Date.now() - sessionState.startTime - sessionState.totalPauseDuration) / 1000;
+        const elapsedSeconds = (Date.now() - sessionState.startTime) / 1000;
+        if (dom.timerSpan) {
             dom.timerSpan.textContent = formatTime(elapsedSeconds);
         }
     }, 1000);
-
-    // Lap Timer
-    sessionState.lapTimerInterval = setInterval(() => {
-        if (!sessionState.isPaused && sessionState.lapStartTime) {
-            const lapElapsedSeconds = (Date.now() - sessionState.lapStartTime) / 1000;
-            dom.rtLapTimeSpan.textContent = lapElapsedSeconds.toFixed(2);
-        }
-    }, 100);
 }
 
 /**
@@ -149,10 +97,6 @@ function stopTimers() {
     if (sessionState.timerInterval) {
         clearInterval(sessionState.timerInterval);
         sessionState.timerInterval = null;
-    }
-    if (sessionState.lapTimerInterval) {
-        clearInterval(sessionState.lapTimerInterval);
-        sessionState.lapTimerInterval = null;
     }
 }
 
@@ -168,115 +112,77 @@ export function startSession(treeCountGoal) {
     
     resetSessionState();
     sessionState.startTime = new Date();
-    sessionState.tapTimestamps = [sessionState.startTime.getTime()]; 
+    sessionState.tapTimestamps.push(sessionState.startTime.getTime()); 
     sessionState.totalTrees = treeCount;
-    sessionState.lapStartTime = Date.now(); // Set initial lap start time
 
-    dom.totalTreesDisplaySpan.textContent = sessionState.totalTrees;
-    dom.currentTreeNumberSpan.textContent = 1;
-    dom.timerSpan.textContent = '00:00:00';
-    dom.nextTreeBtn.disabled = false;
-    dom.endSessionBtn.disabled = false;
-    dom.endSessionFullBtn.disabled = false;
-    dom.pauseSessionBtn.disabled = false;
-    dom.pauseSessionBtn.innerHTML = '<i data-lucide="pause"></i> หยุดพัก';
-    lucide.createIcons({nodes: [dom.pauseSessionBtn.querySelector('i')]});
-
-    dom.newRecordBadge.style.display = 'none'; 
-    dom.pacingAnalysisCard.style.display = 'none'; 
-    dom.aiInsightText.textContent = "กำลังวิเคราะห์ข้อมูลการกรีดของคุณ..."; 
-
-    if (state.goalAvgTime) {
-        dom.pacingIndicator.classList.add('visible');
-        dom.pacingIndicator.className = 'pacing-card visible'; 
-        dom.pacingStatus.textContent = `เทียบเป้าหมาย AI (${state.goalAvgTime.toFixed(2)}s)`;
-        dom.pacingTimeDiff.textContent = 'รอเริ่ม...';
-    } else if (state.bestSessionLapTimes && state.bestSessionLapTimes.length > 0) {
-        dom.pacingIndicator.classList.add('visible');
-        dom.pacingIndicator.className = 'pacing-card visible'; 
-        dom.pacingStatus.textContent = 'เทียบสถิติดีที่สุด';
-        dom.pacingTimeDiff.textContent = 'รอเริ่ม...';
-    } else {
-        dom.pacingIndicator.classList.remove('visible'); 
-    }
-
-    dom.realTimeStatsContainer.classList.remove('hidden');
-    dom.rtAvgTimeSpan.textContent = "0.00";
-    dom.rtLapTimeSpan.textContent = "0.00";
-    renderSessionLoot(sessionState.sessionLoot);
-
-    updateProgressBar(0, sessionState.totalTrees);
+    // Clear previous summary screen data to prevent flashing old data
+    if(dom.newRecordBadge) dom.newRecordBadge.style.display = 'none'; 
+    if(dom.pacingAnalysisCard) dom.pacingAnalysisCard.style.display = 'none'; 
+    if(dom.aiInsightText) dom.aiInsightText.textContent = "กำลังวิเคราะห์ข้อมูลการกรีดของคุณ..."; 
     
+    // Initial UI update for the tapping screen
+    updateTappingScreenUI(sessionState);
     startTimers();
-    
     showScreen(dom.tappingScreen);
 }
 
 /**
- * Handles the logic for the "next tree" click.
+ * Initiates the tapping process for a single tree.
+ * This is called when the user clicks "Start Tapping Tree" on the prep screen.
  */
-export function handleNextTree() {
-    if (sessionState.isPaused || sessionState.totalTrees === 0) return; 
-
-    if (state.animationEffectsEnabled && dom.nextTreeBtn) {
-        dom.nextTreeBtn.classList.remove('anim-ripple');
-        void dom.nextTreeBtn.offsetWidth; 
-        dom.nextTreeBtn.classList.add('anim-ripple');
-        setTimeout(() => {
-            if (dom.nextTreeBtn) {
-                dom.nextTreeBtn.classList.remove('anim-ripple');
-            }
-        }, 600);
+export function initiateTreeTap() {
+    sessionState.lapStartTime = Date.now(); // Start the timer for this specific lap
+    
+    // Update the active tapping screen UI
+    if(dom.activeTapTreeNumber) dom.activeTapTreeNumber.textContent = sessionState.tappedTrees + 1;
+    
+    // Update the real-time average display on the active screen
+    const elapsedSeconds = (Date.now() - sessionState.startTime) / 1000;
+    const currentAvg = sessionState.tappedTrees > 0 ? elapsedSeconds / sessionState.tappedTrees : 0;
+    if (dom.activeRtAvgTimeSpan) {
+        dom.activeRtAvgTimeSpan.textContent = currentAvg.toFixed(2);
     }
 
+    // Show the active tapping screen and hide the header/footer
+    showScreen(dom.activeTappingScreen, false, true); // (screen, isInitial, isTapping)
+}
+
+/**
+ * Finalizes the tap for the current tree.
+ * This is called when the user taps anywhere on the active tapping screen.
+ */
+export function finalizeTreeTap() {
+    if (!sessionState.lapStartTime) return;
+
+    // --- Core Logic for capturing new data ---
+    const now = Date.now();
+    const lapTimeSeconds = (now - sessionState.lapStartTime) / 1000;
+    
     sessionState.tappedTrees++;
-    const now = new Date().getTime();
+    sessionState.tapTimestamps.push(now);
+    sessionState.lapTimes.push(lapTimeSeconds);
     
-    // Calculate current lap time based on the dedicated lapStartTime
-    const currentLapTime = (now - sessionState.lapStartTime) / 1000;
+    // --- New Pacing Logic ---
+    sessionState.previousLapTime = sessionState.lastLapTime; // Shift the last lap to previous
+    sessionState.lastLapTime = lapTimeSeconds; // Set the new last lap time
     
-    sessionState.tapTimestamps.push(now); 
+    // Recalculate real-time average
+    const elapsedSecondsTotal = (now - sessionState.startTime) / 1000;
+    sessionState.currentAvgTime = elapsedSecondsTotal / sessionState.tappedTrees;
 
     playEffect(dom.tapSound, 50);
 
-    updateProgressBar(sessionState.tappedTrees, sessionState.totalTrees);
-
-    if (state.animationEffectsEnabled) {
-        dom.currentTreeNumberSpan.classList.add('anim-pop');
-        setTimeout(() => dom.currentTreeNumberSpan.classList.remove('anim-pop'), 300);
-    }
-    dom.currentTreeNumberSpan.textContent = sessionState.tappedTrees + 1;
-    
-    updateRealTimeStats();
-    sessionState.lapStartTime = Date.now(); // Reset lap start time for the next tree
-
-    if (dom.pacingIndicator.classList.contains('visible')) {
-        let targetLapTime;
-        if (state.goalAvgTime) {
-            targetLapTime = state.goalAvgTime;
-        } else if (state.bestSessionLapTimes && state.bestSessionLapTimes.length >= sessionState.tappedTrees) {
-            targetLapTime = state.bestSessionLapTimes[sessionState.tappedTrees - 1];
-        }
-
-        if (targetLapTime) {
-            const diff = targetLapTime - currentLapTime; 
-            dom.pacingTimeDiff.textContent = `${Math.abs(diff).toFixed(2)}s`;
-            if (diff > 0.05) { 
-                dom.pacingIndicator.className = 'pacing-card visible ahead';
-                dom.pacingStatus.textContent = 'เร็วกว่าเป้า!';
-                dom.pacingTimeDiff.textContent = `+${diff.toFixed(2)}s`;
-            } else if (diff < -0.05) { 
-                dom.pacingIndicator.className = 'pacing-card visible behind';
-                dom.pacingStatus.textContent = 'ช้ากว่าเป้า';
-            } else { 
-                dom.pacingIndicator.className = 'pacing-card visible on-pace';
-                dom.pacingStatus.textContent = 'รักษาความเร็ว';
-                dom.pacingTimeDiff.textContent = '0.00s';
-            }
-        }
-    }
-    
     handleMaterialDrop();
+
+    // Reset lap start time until the next tap is initiated
+    sessionState.lapStartTime = null; 
+
+    // --- UI Update ---
+    // Pass the entire updated state to the UI function for rendering.
+    updateTappingScreenUI(sessionState);
+
+    // Switch back to the prep screen
+    showScreen(dom.tappingScreen);
 }
 
 /**
@@ -297,7 +203,6 @@ function handleMaterialDrop() {
             saveStateObject('materials', state.materials);
             
             sessionState.sessionLoot[randomMaterialKey] = (sessionState.sessionLoot[randomMaterialKey] || 0) + 1;
-            renderSessionLoot(sessionState.sessionLoot);
             
             showToast({ title: `พบวัตถุดิบ!<br>ได้รับ: 1x ${materialData.name}`, lucideIcon: materialData.icon || 'gem' });
         }
@@ -328,7 +233,6 @@ function handleMaterialDrop() {
             
             const seedKey = `${randomSpeciesKey}_seed`;
             sessionState.sessionLoot[seedKey] = (sessionState.sessionLoot[seedKey] || 0) + 1;
-            renderSessionLoot(sessionState.sessionLoot);
             
             showToast({ title: `พบเมล็ดพันธุ์หายาก!<br>ได้รับ: 1x ${speciesData.name} (เมล็ด)`, lucideIcon: 'package', customClass: 'mission-complete' });
         }
@@ -337,56 +241,41 @@ function handleMaterialDrop() {
 
 /**
  * Ends the current tapping session, calculates results, and shows the summary screen.
- * @param {boolean} [isFullPlantation=false] - True if this was a full plantation tap.
  */
 export function endSession(isFullPlantation = false) {
-    if (sessionState.isPaused) {
-        togglePauseSession();
-    }
-    
     stopTimers();
 
-    dom.nextTreeBtn.disabled = true; 
-    dom.endSessionBtn.disabled = true;
-    dom.endSessionFullBtn.disabled = true;
-    dom.pauseSessionBtn.disabled = true;
-    dom.pacingIndicator.classList.remove('visible'); 
-    dom.realTimeStatsContainer.classList.add('hidden');
+    if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = true; 
+    if (dom.endSessionBtn) dom.endSessionBtn.disabled = true;
+    if (dom.endSessionFullBtn) dom.endSessionFullBtn.disabled = true;
+    if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = true;
+    if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = true;
 
     const endTime = new Date();
-    const totalSeconds = (endTime.getTime() - sessionState.startTime.getTime() - sessionState.totalPauseDuration) / 1000;
+    const totalSeconds = (endTime.getTime() - sessionState.startTime.getTime()) / 1000;
     let avgTimePerTree = sessionState.tappedTrees > 0 ? totalSeconds / sessionState.tappedTrees : 0;
     
     avgTimePerTree *= (1 - applyUpgradeEffect('speed_boost_percent', 0));
-
-    const lapTimes = [];
-    if (sessionState.tapTimestamps.length > 1) {
-        for (let i = 1; i < sessionState.tapTimestamps.length; i++) {
-            lapTimes.push((sessionState.tapTimestamps[i] - sessionState.tapTimestamps[i-1]) / 1000);
-        }
-    } else if (sessionState.tappedTrees === 1) {
-        lapTimes.push(totalSeconds);
-    }
     
     const currentSessionData = {
         date: new Date().toISOString(),
         tappedTrees: sessionState.tappedTrees,
         totalTime: totalSeconds,
         avgTime: avgTimePerTree,
-        lapTimes: lapTimes
+        lapTimes: sessionState.lapTimes
     };
     
     const insight = getAIInsight(currentSessionData, state.sessionHistory);
-    dom.aiInsightText.textContent = insight;
+    if(dom.aiInsightText) dom.aiInsightText.textContent = insight;
     currentSessionData.aiInsight = insight;
 
-    const pacingResult = getPacingAnalysis(lapTimes);
-    if (pacingResult) {
+    const pacingResult = getPacingAnalysis(sessionState.lapTimes);
+    if (pacingResult && dom.pacingAnalysisCard) {
         dom.pacingAnalysisCard.style.display = 'block';
-        dom.pacingAnalysisText.textContent = pacingResult.text;
-        dom.pacingFirstHalf.textContent = `${pacingResult.firstHalfAvg.toFixed(2)} วิ/ต้น`;
-        dom.pacingSecondHalf.textContent = `${pacingResult.secondHalfAvg.toFixed(2)} วิ/ต้น`;
-    } else {
+        if(dom.pacingAnalysisText) dom.pacingAnalysisText.textContent = pacingResult.text;
+        if(dom.pacingFirstHalf) dom.pacingFirstHalf.textContent = `${pacingResult.firstHalfAvg.toFixed(2)} วิ/ต้น`;
+        if(dom.pacingSecondHalf) dom.pacingSecondHalf.textContent = `${pacingResult.secondHalfAvg.toFixed(2)} วิ/ต้น`;
+    } else if (dom.pacingAnalysisCard) {
         dom.pacingAnalysisCard.style.display = 'none'; 
     }
 
@@ -410,20 +299,21 @@ export function endSession(isFullPlantation = false) {
     const baseXP = currentSessionData.tappedTrees * 0.5;
     grantXp(baseXP);
 
-    dom.summaryTotalTrees.textContent = `${sessionState.tappedTrees} ต้น`;
-    dom.summaryTotalTime.textContent = formatTime(totalSeconds);
-    dom.summaryAvgTime.textContent = avgTimePerTree.toFixed(2);
+    if(dom.summaryTotalTrees) dom.summaryTotalTrees.textContent = `${sessionState.tappedTrees} ต้น`;
+    if(dom.summaryTotalTime) dom.summaryTotalTime.textContent = formatTime(totalSeconds);
+    if(dom.summaryAvgTime) dom.summaryAvgTime.textContent = avgTimePerTree.toFixed(2);
 
     if (sessionState.tappedTrees > 0 && (!state.bestAvgTime || avgTimePerTree < state.bestAvgTime)) {
-        dom.newRecordBadge.style.display = 'block';
-        
-        if (state.animationEffectsEnabled) {
-            dom.newRecordBadge.classList.add('sparkle');
-            setTimeout(() => dom.newRecordBadge.classList.remove('sparkle'), 700);
+        if(dom.newRecordBadge) {
+            dom.newRecordBadge.style.display = 'block';
+            if (state.animationEffectsEnabled) {
+                dom.newRecordBadge.classList.add('sparkle');
+                setTimeout(() => dom.newRecordBadge.classList.remove('sparkle'), 700);
+            }
         }
 
         saveStateItem('bestAvgTime', avgTimePerTree);
-        state.bestSessionLapTimes = lapTimes; 
+        state.bestSessionLapTimes = sessionState.lapTimes; 
         saveStateObject('bestSessionLapTimes', state.bestSessionLapTimes); 
         
         const baseRecordReward = gameData.gameBalance.RECORD_BONUS_COINS;
@@ -432,7 +322,7 @@ export function endSession(isFullPlantation = false) {
         grantCoins(finalRecordReward);
         showToast({title: `<strong>ทำลายสถิติใหม่!</strong><br>รับ ${finalRecordReward.toLocaleString()} เหรียญ`, lucideIcon: 'award'});
         animateCoins(finalRecordReward, dom.newRecordBadge);
-    } else {
+    } else if(dom.newRecordBadge) {
         dom.newRecordBadge.style.display = 'none';
     }
 

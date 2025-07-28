@@ -252,36 +252,30 @@ export function getAITreeSuggestion() {
     const DEFAULT_SUGGESTION = 100; // Default if not enough data
     const MINIMUM_SUGGESTION = 50; // Don't suggest a very low number
 
-    // If a plantation size is set, use it as the primary suggestion.
+    let suggestedAmount = DEFAULT_SUGGESTION;
+
+    // Logic for returning a suggestion based on history or plantation size
     if (plantationSize && plantationSize > 0) {
-        return Math.round(plantationSize / 10) * 10;
+        suggestedAmount = Math.round(plantationSize / 10) * 10;
+    } else if (sessionHistory && sessionHistory.length >= MIN_SESSIONS_FOR_SUGGESTION) {
+        // Get the last N sessions to analyze recent trends.
+        const recentSessions = sessionHistory.slice(-LOOKBACK_SESSIONS);
+        
+        // Calculate the total number of trees tapped in these recent sessions.
+        const totalTreesInRecentSessions = recentSessions.reduce((sum, session) => {
+            return sum + (Number(session.tappedTrees) || 0);
+        }, 0);
+
+        // Calculate the average.
+        const averageTrees = totalTreesInRecentSessions / recentSessions.length;
+
+        // Round the average to the nearest 10 for a cleaner suggestion (e.g., 123 -> 120, 148 -> 150)
+        if (!isNaN(averageTrees) && averageTrees > 0) {
+            suggestedAmount = Math.round(averageTrees / 10) * 10;
+        }
     }
 
-    // If there isn't enough history, return the default value.
-    if (!sessionHistory || sessionHistory.length < MIN_SESSIONS_FOR_SUGGESTION) {
-        return DEFAULT_SUGGESTION;
-    }
-
-    // Get the last N sessions to analyze recent trends.
-    const recentSessions = sessionHistory.slice(-LOOKBACK_SESSIONS);
-    
-    // Calculate the total number of trees tapped in these recent sessions.
-    const totalTreesInRecentSessions = recentSessions.reduce((sum, session) => {
-        return sum + (Number(session.tappedTrees) || 0);
-    }, 0);
-
-    // Calculate the average.
-    const averageTrees = totalTreesInRecentSessions / recentSessions.length;
-
-    // If the average is somehow invalid, return the default.
-    if (isNaN(averageTrees) || averageTrees <= 0) {
-        return DEFAULT_SUGGESTION;
-    }
-
-    // Round the average to the nearest 10 for a cleaner suggestion (e.g., 123 -> 120, 148 -> 150)
-    let suggestedAmount = Math.round(averageTrees / 10) * 10;
-
-    // Ensure the suggestion isn't below our defined minimum.
+    // Final check to ensure the suggestion is not below our defined minimum.
     if (suggestedAmount < MINIMUM_SUGGESTION) {
         suggestedAmount = MINIMUM_SUGGESTION;
     }

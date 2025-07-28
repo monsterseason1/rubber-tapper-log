@@ -223,16 +223,14 @@ export function resetSessionState() {
         totalTrees: 0,
         tappedTrees: 0,
         startTime: null,
-        tapTimestamps: [],
+        lapStartTime: null,
         timerInterval: null,
-        currentAvgTime: 0,
-        lapTimerInterval: null,
+        tapTimestamps: [],
+        lapTimes: [],
         sessionLoot: {},
-        isPaused: false,
-        pauseStartTime: null,
-        totalPauseDuration: 0,
-        // --- START: New property for Lap Timer fix ---
-        lapStartTime: null
-        // --- END: New property ---
+        // --- New/Revised properties for real-time stats ---
+        currentAvgTime: 0,
+        lastLapTime: 0,
+        previousLapTime: 0,
     };
 }

@@ -1,4 +1,4 @@
-// --- START OF FILE ui.js ---
+// --- START OF FILE js/ui.js ---
 
 /*
 ======================================
@@ -8,7 +8,7 @@
 */
 
 import * as dom from './dom.js';
-import { state, saveStateItem } from './state.js'; 
+import { state, sessionState, saveStateItem } from './state.js';
 import { calculateStreak, getAICoachTip, getXpForNextLevel, calculateSalesAnalytics, calculateLastSaleAnalysis } from './analysis.js'; 
 import { gameData } from './gameDataService.js';
 import { renderPlantation } from './plantation.js';
@@ -16,6 +16,8 @@ import { initializeBreedingScreen } from './breeding.js';
 
 let avgTimeChartInstance = null;
 let treesTappedChartInstance = null;
+const mainHeader = document.querySelector('.main-header');
+
 
 // --- UI Functions for Missions, Leveling & Shop ---
 
@@ -420,12 +422,25 @@ export function updateAnimationToggle() {
 /**
  * Hides all screens and shows the specified screen.
  * @param {HTMLElement} screenToShow The DOM element of the screen to display.
+ * @param {boolean} [isInitialLoad=false] Flag for the very first screen load.
+ * @param {boolean} [isTapping=false] Flag to indicate if we are in the active tapping state.
  */
-export function showScreen(screenToShow) {
+export function showScreen(screenToShow, isInitialLoad = false, isTapping = false) {
     dom.allScreens.forEach(screen => screen.classList.remove('active'));
     screenToShow.classList.add('active');
     
-    if (state.animationEffectsEnabled) {
+    // Manage header visibility
+    if (mainHeader) {
+        if (isInitialLoad || isTapping) {
+            mainHeader.style.display = 'none';
+        } else {
+            mainHeader.style.display = 'grid';
+        }
+    }
+    // Manage body class for full-screen tapping
+    dom.body.classList.toggle('is-tapping', isTapping);
+
+    if (state.animationEffectsEnabled && !isTapping) {
         const screenContent = screenToShow.querySelector('.screen-content');
         if (screenContent) {
             screenContent.classList.remove('anim-slide-in-up');
@@ -450,18 +465,21 @@ export function adjustSetupScreenForUser() {
     const inputGroup = dom.totalTreesInput.parentElement;
     const logSaleBtn = dom.logSaleBtn;
 
+    // Always hide the manual input group as it's deprecated
+    if (inputGroup) inputGroup.classList.add('hidden');
+    
+    // Adjust the main start button text and visibility of sale button
     if (isNewUser) {
-        if (inputGroup) inputGroup.classList.add('hidden');
         dom.startSessionBtn.innerHTML = '<i data-lucide="play-circle"></i> เริ่มบันทึกครั้งแรก!';
         if(logSaleBtn) logSaleBtn.style.display = 'none';
     } else {
-        if (inputGroup) inputGroup.classList.add('hidden');
-        dom.startSessionBtn.innerHTML = 'เริ่มบันทึกการกรีด';
+        dom.startSessionBtn.innerHTML = '<i data-lucide="play-circle"></i> เริ่มบันทึกการกรีด';
         if(logSaleBtn) logSaleBtn.style.display = 'flex';
     }
     
+    // Refresh icons for the buttons
     lucide.createIcons({
-        nodes: [dom.startSessionBtn, logSaleBtn].filter(Boolean)
+        nodes: [dom.startSessionBtn, logSaleBtn].filter(Boolean).map(el => el.querySelector('i')).filter(Boolean)
     });
 }
 
@@ -519,11 +537,71 @@ export function showToast({ title, lucideIcon = 'info', customClass = '' }) {
  * @param {number} tapped The number of trees tapped.
  * @param {number} total The total number of trees for the session goal.
  */
-export function updateProgressBar(tapped, total) {
+function updateProgressBar(tapped, total) {
     if (dom.progressBar) {
         const percentage = total > 0 ? Math.min((tapped / total) * 100, 100) : 0;
         dom.progressBar.style.width = `${percentage}%`;
     }
+}
+
+/**
+ * Updates all UI elements on the main tapping (prep) screen based on the current session state.
+ * @param {object} currentSessionState The sessionState object with all current data.
+ */
+export function updateTappingScreenUI(currentSessionState) {
+    const { 
+        tappedTrees, 
+        totalTrees, 
+        sessionLoot, 
+        currentAvgTime, 
+        lastLapTime, 
+        previousLapTime 
+    } = currentSessionState;
+
+    // Update tree counters and progress bar
+    if (dom.currentTreeNumberSpan) dom.currentTreeNumberSpan.textContent = tappedTrees + 1;
+    if (dom.totalTreesDisplaySpan) dom.totalTreesDisplaySpan.textContent = totalTrees;
+    updateProgressBar(tappedTrees, totalTrees);
+    
+    // Update loot display
+    renderSessionLoot(sessionLoot);
+
+    // Update real-time stats
+    if (dom.rtAvgTimeSpan) dom.rtAvgTimeSpan.textContent = currentAvgTime.toFixed(2);
+    if (dom.rtLastLapTimeSpan) dom.rtLastLapTimeSpan.textContent = lastLapTime.toFixed(2);
+    
+    // Update pacing indicator
+    if (dom.rtPacingIcon && tappedTrees > 1 && previousLapTime > 0) {
+        const parentP = dom.rtLastLapTimeSpan.parentElement;
+        parentP.classList.remove('faster', 'slower');
+
+        if (lastLapTime < previousLapTime) {
+            dom.rtPacingIcon.innerHTML = '<i data-lucide="arrow-down-right"></i>';
+            parentP.classList.add('faster');
+        } else if (lastLapTime > previousLapTime) {
+            dom.rtPacingIcon.innerHTML = '<i data-lucide="arrow-up-right"></i>';
+            parentP.classList.add('slower');
+        } else {
+            dom.rtPacingIcon.innerHTML = '<i data-lucide="minus"></i>';
+        }
+        lucide.createIcons({ nodes: dom.rtPacingIcon.querySelectorAll('i') });
+    } else if (dom.rtPacingIcon) {
+        dom.rtPacingIcon.innerHTML = ''; // Clear icon if not enough data
+        const parentP = dom.rtLastLapTimeSpan.parentElement;
+        parentP.classList.remove('faster', 'slower');
+    }
+
+    // Update button states
+    const startButton = dom.startTappingTreeBtn.querySelector('span');
+    if (startButton) {
+        startButton.textContent = `กรีดต้นที่ ${tappedTrees + 1}`;
+    }
+    
+    if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = false;
+    if (dom.endSessionBtn) dom.endSessionBtn.disabled = false;
+    if (dom.endSessionFullBtn) dom.endSessionFullBtn.disabled = false;
+    if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = false;
+    if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = false;
 }
 
 function showInfoBlock(activeBlock) {

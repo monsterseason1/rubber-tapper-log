@@ -19,6 +19,30 @@ let treesTappedChartInstance = null;
 const mainHeader = document.querySelector('.main-header');
 
 
+// --- START: New Notification Logic ---
+
+/**
+ * Checks all relevant state properties and updates the notification dots on menu buttons.
+ */
+export function updateNotificationIndicators() {
+    // Check for new trees in the plantation
+    const hasNewTrees = state.playerTrees && state.playerTrees.some(tree => tree.isNew);
+    const plantationDot = dom.plantationBtn.querySelector('.notification-dot');
+    if (plantationDot) {
+        plantationDot.classList.toggle('hidden', !hasNewTrees);
+    }
+
+    // Future checks can be added here, e.g., for missions or shop items
+    // const hasCompletedMissions = state.activeMissions && state.activeMissions.some(m => m.completed && !m.claimed);
+    // const missionDot = dom.missionsBtn.querySelector('.notification-dot');
+    // if(missionDot) {
+    //     missionDot.classList.toggle('hidden', !hasCompletedMissions);
+    // }
+}
+
+// --- END: New Notification Logic ---
+
+
 // --- UI Functions for Missions, Leveling & Shop ---
 
 /**
@@ -452,6 +476,7 @@ export function showScreen(screenToShow, isInitialLoad = false, isTapping = fals
     if (screenToShow === dom.setupScreen) {
         updateDynamicInfoPanel();
         adjustSetupScreenForUser();
+        updateNotificationIndicators(); // --- START: Call notification update
     }
 }
 
@@ -539,38 +564,59 @@ export function showToast({ title, lucideIcon = 'info', customClass = '' }) {
  */
 function updateProgressBar(tapped, total) {
     if (dom.progressBar) {
-        const percentage = total > 0 ? Math.min((tapped / total) * 100, 100) : 0;
+        // --- START: Reworked Progress Bar Logic ---
+        // The total for the progress bar is ALWAYS the session goal.
+        const totalForProgressBar = total;
+        const currentTotalTapped = state.tappedTreesInCurrentCycle + tapped;
+
+        const percentage = totalForProgressBar > 0 ? Math.min((currentTotalTapped / totalForProgressBar) * 100, 100) : 0;
         dom.progressBar.style.width = `${percentage}%`;
+        // --- END: Reworked Progress Bar Logic ---
     }
 }
 
 /**
  * Updates all UI elements on the main tapping (prep) screen based on the current session state.
- * @param {object} currentSessionState The sessionState object with all current data.
  */
-export function updateTappingScreenUI(currentSessionState) {
+export function updateTappingScreenUI() {
+    // --- START: Reworked UI Logic ---
     const { 
-        tappedTrees, 
-        totalTrees, 
+        tappedTrees, // This is from sessionState, representing trees tapped in THIS sub-session
+        totalTrees, // This is the session goal
         sessionLoot, 
         currentAvgTime, 
         lastLapTime, 
         previousLapTime 
-    } = currentSessionState;
+    } = sessionState;
+
+    const totalTappedInCycle = state.tappedTreesInCurrentCycle + tappedTrees;
 
     // Update tree counters and progress bar
-    if (dom.currentTreeNumberSpan) dom.currentTreeNumberSpan.textContent = tappedTrees + 1;
-    if (dom.totalTreesDisplaySpan) dom.totalTreesDisplaySpan.textContent = totalTrees;
+    if (dom.currentTreeNumberSpan) dom.currentTreeNumberSpan.textContent = totalTappedInCycle + 1;
+    if (dom.totalTreesDisplaySpan) {
+        // The display now ALWAYS shows the session goal.
+        dom.totalTreesDisplaySpan.textContent = totalTrees;
+    }
     updateProgressBar(tappedTrees, totalTrees);
+
+    // NEW: Update plantation size info display
+    if (dom.plantationSizeInfoTapping) {
+        if (state.plantationSize > 0) {
+            dom.plantationSizeInfoTapping.textContent = `จากสวนทั้งหมด: ${state.plantationSize} ต้น`;
+            dom.plantationSizeInfoTapping.style.display = 'block';
+        } else {
+            dom.plantationSizeInfoTapping.style.display = 'none';
+        }
+    }
     
-    // Update loot display
+    // Update loot display (no change here)
     renderSessionLoot(sessionLoot);
 
-    // Update real-time stats
+    // Update real-time stats (no change here)
     if (dom.rtAvgTimeSpan) dom.rtAvgTimeSpan.textContent = currentAvgTime.toFixed(2);
     if (dom.rtLastLapTimeSpan) dom.rtLastLapTimeSpan.textContent = lastLapTime.toFixed(2);
     
-    // Update pacing indicator
+    // Update pacing indicator (no change here)
     if (dom.rtPacingIcon && tappedTrees > 1 && previousLapTime > 0) {
         const parentP = dom.rtLastLapTimeSpan.parentElement;
         parentP.classList.remove('faster', 'slower');
@@ -592,16 +638,27 @@ export function updateTappingScreenUI(currentSessionState) {
     }
 
     // Update button states
-    const startButton = dom.startTappingTreeBtn.querySelector('span');
-    if (startButton) {
-        startButton.textContent = `กรีดต้นที่ ${tappedTrees + 1}`;
+    const startButtonSpan = dom.startTappingTreeBtn.querySelector('span');
+    if (startButtonSpan) {
+        startButtonSpan.textContent = `กรีดต้นที่ ${totalTappedInCycle + 1}`;
     }
     
     if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = false;
     if (dom.endSessionBtn) dom.endSessionBtn.disabled = false;
-    if (dom.endSessionFullBtn) dom.endSessionFullBtn.disabled = false;
+    
+    // --- New logic to hide "Full Plantation" button ---
+    const isFullPlantationKnown = state.plantationSize > 0;
+    const fullPlantationButtons = [dom.endSessionFullBtn, dom.endSessionFullBtnDesktop];
+    fullPlantationButtons.forEach(btn => {
+        if (btn) {
+            btn.style.display = isFullPlantationKnown ? 'none' : 'inline-flex';
+            btn.disabled = false;
+        }
+    });
+    // --- END: New logic to hide "Full Plantation" button ---
+
     if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = false;
-    if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = false;
+    // --- END: Reworked UI Logic ---
 }
 
 function showInfoBlock(activeBlock) {

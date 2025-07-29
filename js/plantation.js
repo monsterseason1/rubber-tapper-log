@@ -132,9 +132,15 @@ export function renderPlantation() {
         card.className = `tree-card ${stageClass} ${isActive ? 'active' : ''} ${isCompact ? 'seedling' : ''}`;
         card.dataset.treeIndex = index;
 
+        // --- START: New Indicator Logic ---
+        const newItemIndicator = tree.isNew ? '<div class="new-item-indicator">ใหม่</div>' : '';
+        const stageBadgeHtml = stageText ? `<div class="stage-badge ${stageClass}">${stageText}</div>` : '';
+        // --- END: New Indicator Logic ---
+
         card.innerHTML = `
             ${isActive ? '<div class="active-tree-indicator"><i data-lucide="power"></i><span>Active</span></div>' : ''}
-            ${stageText ? `<div class="stage-badge ${stageClass}">${stageText}</div>` : ''}
+            ${newItemIndicator}
+            ${stageBadgeHtml}
             <div class="tree-icon"><i data-lucide="${cardIcon}"></i></div>
             <h4>${treeData.name}</h4>
             <p class="tree-level">${growthStage !== 'Grown' ? tree.rarity : `Lvl ${tree.level}`}</p>
@@ -155,8 +161,23 @@ function handleTreeCardClick(event) {
     if (!card) return;
     const treeIndex = parseInt(card.dataset.treeIndex, 10);
     if (isNaN(treeIndex) || !state.playerTrees || treeIndex < 0 || treeIndex >= state.playerTrees.length) return;
+    
     const tree = state.playerTrees[treeIndex];
     if (!tree) return;
+    
+    // --- START: Clear 'isNew' status on interaction ---
+    if (tree.isNew) {
+        tree.isNew = false;
+        saveStateObject('playerTrees', state.playerTrees);
+        // Remove the indicator from the DOM directly for an instant visual update
+        // without a full re-render, which could be jarring.
+        const indicator = card.querySelector('.new-item-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    // --- END: Clear 'isNew' status ---
+
     displayTreeInfo(tree, treeIndex);
 }
 

@@ -121,7 +121,7 @@ export function startSession(treeCountGoal) {
     if(dom.aiInsightText) dom.aiInsightText.textContent = "กำลังวิเคราะห์ข้อมูลการกรีดของคุณ..."; 
     
     // Initial UI update for the tapping screen
-    updateTappingScreenUI(sessionState);
+    updateTappingScreenUI(); // Pass no args to use global state
     startTimers();
     showScreen(dom.tappingScreen);
 }
@@ -134,7 +134,7 @@ export function initiateTreeTap() {
     sessionState.lapStartTime = Date.now(); // Start the timer for this specific lap
     
     // Update the active tapping screen UI
-    if(dom.activeTapTreeNumber) dom.activeTapTreeNumber.textContent = sessionState.tappedTrees + 1;
+    if(dom.activeTapTreeNumber) dom.activeTapTreeNumber.textContent = state.tappedTreesInCurrentCycle + sessionState.tappedTrees + 1;
     
     // Update the real-time average display on the active screen
     const elapsedSeconds = (Date.now() - sessionState.startTime) / 1000;
@@ -166,7 +166,7 @@ export function finalizeTreeTap() {
     sessionState.previousLapTime = sessionState.lastLapTime; // Shift the last lap to previous
     sessionState.lastLapTime = lapTimeSeconds; // Set the new last lap time
     
-    // Recalculate real-time average
+    // Recalculate real-time average for this sub-session only
     const elapsedSecondsTotal = (now - sessionState.startTime) / 1000;
     sessionState.currentAvgTime = elapsedSecondsTotal / sessionState.tappedTrees;
 
@@ -178,8 +178,7 @@ export function finalizeTreeTap() {
     sessionState.lapStartTime = null; 
 
     // --- UI Update ---
-    // Pass the entire updated state to the UI function for rendering.
-    updateTappingScreenUI(sessionState);
+    updateTappingScreenUI();
 
     // Switch back to the prep screen
     showScreen(dom.tappingScreen);
@@ -225,6 +224,7 @@ function handleMaterialDrop() {
                 exp: 0,
                 growthStage: 'Seed', 
                 specialAttributes: speciesData.baseAttributes || {},
+                isNew: true, // --- START: This is the new change ---
             };
             
             if (!state.playerTrees) state.playerTrees = [];
@@ -251,6 +251,12 @@ export function endSession(isFullPlantation = false) {
     if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = true;
     if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = true;
 
+    // --- START: New logic for cycle handling ---
+    // Add the trees from this sub-session to the total for the current cycle
+    state.tappedTreesInCurrentCycle += sessionState.tappedTrees;
+    saveStateItem('tappedTreesInCurrentCycle', state.tappedTreesInCurrentCycle);
+    // --- END: New logic for cycle handling ---
+
     const endTime = new Date();
     const totalSeconds = (endTime.getTime() - sessionState.startTime.getTime()) / 1000;
     let avgTimePerTree = sessionState.tappedTrees > 0 ? totalSeconds / sessionState.tappedTrees : 0;
@@ -259,7 +265,7 @@ export function endSession(isFullPlantation = false) {
     
     const currentSessionData = {
         date: new Date().toISOString(),
-        tappedTrees: sessionState.tappedTrees,
+        tappedTrees: sessionState.tappedTrees, // This remains the count for the *sub-session*
         totalTime: totalSeconds,
         avgTime: avgTimePerTree,
         lapTimes: sessionState.lapTimes
@@ -290,11 +296,21 @@ export function endSession(isFullPlantation = false) {
     state.lifetimeTrees += sessionState.tappedTrees;
     saveStateItem('lifetimeTrees', state.lifetimeTrees);
     
-    if (isFullPlantation && sessionState.tappedTrees > 0) {
-        state.plantationSize = sessionState.tappedTrees;
-        saveStateItem('plantationSize', state.plantationSize);
-        showToast({ title: `บันทึกขนาดสวน ${state.plantationSize} ต้น สำเร็จ!`, lucideIcon: 'check-check', customClass: 'mission-complete'});
+    // --- START: Reworked "Full Plantation" logic ---
+    if (isFullPlantation && state.tappedTreesInCurrentCycle > 0) {
+        // Only set plantationSize if it hasn't been set before
+        if (!state.plantationSize) {
+            state.plantationSize = state.tappedTreesInCurrentCycle;
+            saveStateItem('plantationSize', state.plantationSize);
+            showToast({ title: `บันทึกขนาดสวน ${state.plantationSize} ต้น สำเร็จ!`, lucideIcon: 'check-check', customClass: 'mission-complete'});
+        }
+        
+        // Reset the cycle counter for the next full round
+        state.tappedTreesInCurrentCycle = 0;
+        saveStateItem('tappedTreesInCurrentCycle', state.tappedTreesInCurrentCycle);
+        showToast({ title: 'สิ้นสุดรอบการกรีด!', lucideIcon: 'flag', customClass: 'mission-complete'});
     }
+    // --- END: Reworked "Full Plantation" logic ---
 
     const baseXP = currentSessionData.tappedTrees * 0.5;
     grantXp(baseXP);

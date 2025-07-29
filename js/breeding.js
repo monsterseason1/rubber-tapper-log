@@ -317,6 +317,7 @@ function performFusion(tree1, tree2) {
         exp: 0,
         growthStage: 'Seed', 
         specialAttributes: resultingAttributes,
+        isNew: true, // --- START: This is the new change ---
     };
 }
 

@@ -37,7 +37,8 @@ import {
     renderSalesDashboard,
     displaySaleResult,
     showDailyRewardModal,
-    hideDailyRewardModal
+    hideDailyRewardModal,
+    updateNotificationIndicators // --- START: Import the new function ---
 } from './ui.js';
 import { startSession, initiateTreeTap, finalizeTreeTap, endSession } from './session.js';
 import { generateNewMissions } from './missions.js'; 
@@ -70,6 +71,7 @@ async function initializeApp() {
         updateUserCoinBalance();
         updateGoalDisplay();
         updateAnimationToggle();
+        updateNotificationIndicators(); // --- START: Call on app load ---
         
         adjustSetupScreenForUser(); // Let UI function handle UI state
 
@@ -167,6 +169,7 @@ function handleClaimReward() {
                      exp: 0,
                      growthStage: 'Seed',
                      specialAttributes: speciesData.baseAttributes || {},
+                     isNew: true, // --- START: Add isNew property for daily rewards ---
                 };
                 if (!state.playerTrees) state.playerTrees = [];
                 state.playerTrees.push(newSeed);
@@ -275,6 +278,13 @@ function setupEventListeners() {
     dom.plantationBtn.addEventListener('click', () => {
         renderPlantation();
         showScreen(dom.plantationScreen);
+        // --- START: Clear notification when entering the screen ---
+        if (state.playerTrees.some(t => t.isNew)) {
+            state.playerTrees.forEach(t => t.isNew = false);
+            saveStateObject('playerTrees', state.playerTrees);
+            updateNotificationIndicators();
+        }
+        // --- END: Clear notification ---
     });
     dom.breedingNavBtn.addEventListener('click', () => {
         initializeBreedingScreen();

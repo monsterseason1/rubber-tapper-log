@@ -13,6 +13,40 @@ export let state = {};
 export let sessionState = {};
 
 /**
+ * Saves a single key-value pair to localStorage and updates the live state.
+ * @param {string} key The key for the localStorage item.
+ * @param {any} value The value to save. Can be string, number, boolean, null. Use JSON.stringify for objects/arrays.
+ */
+export function saveStateItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        if (Object.prototype.hasOwnProperty.call(state, key)) {
+            state[key] = value;
+        }
+    } catch (e) {
+        console.error(`Error saving state item for key "${key}":`, e);
+    }
+}
+
+/**
+ * Saves an object or array to localStorage by converting it to a JSON string.
+ * @param {string} key The key for the localStorage item.
+ * @param {object | Array<any>} value The object or array to save.
+ */
+export function saveStateObject(key, value) {
+    try {
+        const stringValue = JSON.stringify(value);
+        localStorage.setItem(key, stringValue);
+        if (Object.prototype.hasOwnProperty.call(state, key)) {
+            state[key] = value;
+        }
+    } catch (e) {
+        console.error(`Error saving state object for key "${key}":`, e);
+    }
+}
+
+
+/**
  * Loads the initial state from localStorage.
  */
 export function loadState() {
@@ -29,6 +63,23 @@ export function loadState() {
         console.warn('Could not parse playerTrees from localStorage. Defaulting to an empty array.', error);
         playerTrees = [];
     }
+    
+    // --- START: New logic to ensure data consistency for 'isNew' property ---
+    if (Array.isArray(playerTrees)) {
+        let needsSave = false;
+        playerTrees.forEach(tree => {
+            // If isNew property is missing, this is old data. Add it as false.
+            if (tree.isNew === undefined) {
+                tree.isNew = false;
+                needsSave = true;
+            }
+        });
+        // If we modified any tree, save the updated array back to localStorage.
+        if (needsSave) {
+            saveStateObject('playerTrees', playerTrees);
+        }
+    }
+    // --- END: New logic ---
 
     const sessionHistory = JSON.parse(localStorage.getItem('sessionHistory')) || [];
     const bestAvgTime = parseFloat(localStorage.getItem('bestAvgTime')) || null;
@@ -79,6 +130,9 @@ export function loadState() {
         salesHistory: salesHistory,
 
         plantationSize: parseInt(localStorage.getItem('plantationSize'), 10) || null,
+        // --- START: New state for continuous tapping cycle ---
+        tappedTreesInCurrentCycle: parseInt(localStorage.getItem('tappedTreesInCurrentCycle'), 10) || 0,
+        // --- END: New state for continuous tapping cycle ---
 
         lastLoginDate: localStorage.getItem('lastLoginDate') || null,
         loginStreakCount: parseInt(localStorage.getItem('loginStreakCount'), 10) || 0,
@@ -160,39 +214,6 @@ export function loadState() {
             
             saveStateObject('playerTrees', state.playerTrees);
         }
-    }
-}
-
-/**
- * Saves a single key-value pair to localStorage and updates the live state.
- * @param {string} key The key for the localStorage item.
- * @param {any} value The value to save. Can be string, number, boolean, null. Use JSON.stringify for objects/arrays.
- */
-export function saveStateItem(key, value) {
-    try {
-        localStorage.setItem(key, value);
-        if (Object.prototype.hasOwnProperty.call(state, key)) {
-            state[key] = value;
-        }
-    } catch (e) {
-        console.error(`Error saving state item for key "${key}":`, e);
-    }
-}
-
-/**
- * Saves an object or array to localStorage by converting it to a JSON string.
- * @param {string} key The key for the localStorage item.
- * @param {object | Array<any>} value The object or array to save.
- */
-export function saveStateObject(key, value) {
-    try {
-        const stringValue = JSON.stringify(value);
-        localStorage.setItem(key, stringValue);
-        if (Object.prototype.hasOwnProperty.call(state, key)) {
-            state[key] = value;
-        }
-    } catch (e) {
-        console.error(`Error saving state object for key "${key}":`, e);
     }
 }
 

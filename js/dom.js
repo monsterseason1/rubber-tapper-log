@@ -92,6 +92,10 @@ export const rtSessionLootContainer = document.getElementById('rt-session-loot-c
 export const rtAvgTimeSpan = document.getElementById('rt-avg-time');
 export const rtLastLapTimeSpan = document.getElementById('rt-last-lap-time');
 export const rtPacingIcon = document.getElementById('rt-pacing-icon');
+// START: This is the new change
+export const plantationSizeInfoTapping = document.getElementById('plantation-size-info-tapping');
+// END: This is the new change
+
 
 // --- Active Tapping Screen Elements ---
 export const activeTapZone = document.getElementById('active-tap-zone');

@@ -99,6 +99,7 @@ export function loadState() {
     const activeTreeId = localStorage.getItem('activeTreeId') || null;
     const marketplace = JSON.parse(localStorage.getItem('marketplace')) || { myListings: [] };
     const salesHistory = JSON.parse(localStorage.getItem('salesHistory')) || [];
+    const realPlantationLayout = JSON.parse(localStorage.getItem('realPlantationLayout')) || [];
 
     state = {
         bestAvgTime: bestAvgTime,
@@ -133,6 +134,10 @@ export function loadState() {
         // --- START: New state for continuous tapping cycle ---
         tappedTreesInCurrentCycle: parseInt(localStorage.getItem('tappedTreesInCurrentCycle'), 10) || 0,
         // --- END: New state for continuous tapping cycle ---
+
+        // --- New Plantation Map State ---
+        isMappingModeActive: localStorage.getItem('isMappingModeActive') === 'true',
+        realPlantationLayout: realPlantationLayout,
 
         lastLoginDate: localStorage.getItem('lastLoginDate') || null,
         loginStreakCount: parseInt(localStorage.getItem('loginStreakCount'), 10) || 0,
@@ -253,5 +258,8 @@ export function resetSessionState() {
         currentAvgTime: 0,
         lastLapTime: 0,
         previousLapTime: 0,
+        // --- New Session State for Mapping ---
+        mapLayout: [],
+        currentMapPosition: null
     };
 }

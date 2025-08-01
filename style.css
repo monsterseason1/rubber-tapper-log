@@ -153,6 +153,11 @@ hr {
     margin: 1.5rem 0;
 }
 
+.hidden {
+    display: none !important;
+}
+
+
 /* --- 3. Main Layout & Header --- */
 .main-header {
     display: grid;
@@ -319,6 +324,14 @@ footer {
     }
 }
 
+/* --- START: New Daily Reward Glow Animation --- */
+@keyframes todayGlow {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 40%, transparent); }
+    70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary-color) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 0%, transparent); }
+}
+/* --- END: New Daily Reward Glow Animation --- */
+
 .anim-slide-in-up {
     animation: slideInUp 0.4s ease-out forwards;
 }
@@ -363,6 +376,11 @@ footer {
 .btn {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
 }
 
 .icon-btn {
@@ -554,7 +572,7 @@ footer {
     font-weight: 500;
 }
 
-input[type="number"], input[type="text"] {
+input[type="number"], input[type="text"], textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
@@ -564,9 +582,10 @@ input[type="number"], input[type="text"] {
     font-family: var(--font-family);
     font-size: 1rem;
     transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
 }
 
-input[type="number"]:focus, input[type="text"]:focus {
+input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
@@ -686,6 +705,17 @@ input[type="number"]:focus, input[type="text"]:focus {
     font-weight: 700;
 }
 
+#info-map-prompt h4 {
+    margin-bottom: 0.5rem;
+}
+#info-map-prompt p {
+    margin-bottom: 1rem;
+}
+#info-map-prompt .btn-small {
+    width: 100%;
+}
+
+
 progress {
     width: 100%;
     height: 8px;
@@ -785,32 +815,68 @@ progress::-webkit-progress-value {
     filter: brightness(0.95);
 }
 
-@keyframes ripple-effect {
-  to {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-.btn-tap.anim-ripple::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    transform: scale(0);
-    animation: ripple-effect 0.6s linear;
-    background-color: rgba(255, 255, 255, 0.7);
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-}
-
 .btn-tap:disabled {
     cursor: not-allowed;
     background: var(--border-color);
     box-shadow: none;
     color: var(--subtle-text-color);
     opacity: 0.7;
+}
+
+/* Mapping Controls */
+#mapping-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+.mapping-guide {
+    font-weight: 500;
+    margin-bottom: 0;
+}
+.mapping-grid {
+    display: grid;
+    grid-template-columns: 80px 80px 80px;
+    grid-template-rows: 80px 80px 80px;
+    gap: 0.5rem;
+}
+.btn-map-dir {
+    background-color: var(--secondary-hover);
+    color: white;
+    border-radius: 12px;
+    font-size: 2rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dark-mode .btn-map-dir {
+    background-color: #2d3748;
+    color: var(--text-color);
+}
+
+.btn-map-dir:hover {
+    background-color: var(--primary-color);
+    transform: scale(1.05);
+}
+.btn-map-dir:active {
+    transform: scale(0.98);
+}
+.current-tree-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-color);
+    border-radius: 12px;
+    border: 2px dashed var(--border-color);
+}
+.current-tree-marker i {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-color);
+    animation: pulse 2s infinite;
 }
 
 .tapping-secondary-actions-mobile {
@@ -868,8 +934,19 @@ progress::-webkit-progress-value {
     font-size: 0.75rem;
     font-weight: 400;
     color: var(--subtle-text-color);
-    margin-top: 0.25rem;
-    height: 1em; /* Reserve space to prevent layout shift */
+    text-align: center;
+    margin: 0; /* Remove default paragraph margin */
+    height: 0; /* Collapse height when hidden */
+    opacity: 0;
+    transition: height 0.3s ease, opacity 0.3s ease;
+}
+
+/* When the JS adds text and it becomes visible */
+.plantation-info-tapping:not([style*="display: none"]) {
+    height: 1.2em; /* Animate to its natural height */
+    opacity: 1;
+    margin-top: -0.25rem; /* Pull it a bit closer to the stats grid */
+    margin-bottom: 0.5rem; /* Add space before the progress bar */
 }
 /* END: This is the new change */
 
@@ -976,33 +1053,6 @@ progress::-webkit-progress-value {
     border-radius: 8px;
     font-weight: 700;
     animation: pulse 1.5s infinite;
-    position: relative;
-    overflow: hidden;
-}
-
-#new-record-badge.sparkle::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 1;
-    animation: badgeSparkle 0.7s ease-out forwards;
-}
-
-@keyframes badgeSparkle {
-    0% {
-        transform: translate(-50%, -50%) scale(0);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 0;
-    }
 }
 
 .pacing-details {
@@ -1156,17 +1206,6 @@ p.current-goal-value span {
 
 .xp-bar.glow {
     box-shadow: 0 0 8px var(--xp-bar-fill);
-    animation: xpGlow 0.5s ease-out forwards;
-}
-
-@keyframes xpGlow {
-    0% {
-        box-shadow: 0 0 8px var(--xp-bar-fill);
-    }
-
-    100% {
-        box-shadow: none;
-    }
 }
 
 .coin-balance-header {
@@ -1177,16 +1216,10 @@ p.current-goal-value span {
     background-color: var(--border-color);
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
-    position: relative;
-    overflow: hidden;
 }
 
 .coin-balance-header i {
     color: #f6ad55;
-}
-
-.coin-balance-header #coin-balance-amount.anim-pop {
-    display: inline-block;
 }
 
 /* --- 9. Grids, Modals & Toasts --- */
@@ -1195,6 +1228,355 @@ p.current-goal-value span {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
 }
+
+/* --- Plantation & Tree Card Styling --- */
+.tree-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    padding-top: 1rem;
+}
+
+.tree-card {
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative; /* For badges */
+}
+
+.tree-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--card-shadow-hover);
+}
+
+.tree-card .tree-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.tree-card h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    min-height: 2.4em; /* Reserve space for two lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-card .tree-level {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--subtle-text-color);
+}
+
+.tree-card .tree-card-footer {
+    margin-top: auto; /* Push footer to bottom */
+    padding-top: 0.5rem;
+}
+
+.tree-card .tree-exp-bar-container {
+    height: 6px;
+    background-color: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.tree-card .tree-exp-bar {
+    height: 100%;
+    background-color: var(--xp-bar-fill);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.tree-card .tree-exp-label {
+    font-size: 0.7rem;
+    margin: 0;
+    color: var(--subtle-text-color);
+}
+
+.tree-card .tree-info-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.tree-card .growth-countdown.ready-to-grow {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+/* START: This is the new change */
+.tree-card.rarity-common { border-color: var(--rarity-common-color); background-color: color-mix(in srgb, var(--rarity-common-color) 10%, transparent); }
+.tree-card.rarity-uncommon { border-color: var(--rarity-uncommon-color); background-color: color-mix(in srgb, var(--rarity-uncommon-color) 10%, transparent); }
+.tree-card.rarity-rare { border-color: var(--rarity-rare-color); background-color: color-mix(in srgb, var(--rarity-rare-color) 10%, transparent); }
+.tree-card.rarity-epic { border-color: var(--rarity-epic-color); background-color: color-mix(in srgb, var(--rarity-epic-color) 10%, transparent); }
+.tree-card.rarity-legendary { border-color: var(--rarity-legendary-color); background-color: color-mix(in srgb, var(--rarity-legendary-color) 10%, transparent); }
+
+.tree-card.rarity-common .tree-icon { color: var(--rarity-common-color); }
+.tree-card.rarity-uncommon .tree-icon { color: var(--rarity-uncommon-color); }
+.tree-card.rarity-rare .tree-icon { color: var(--rarity-rare-color); }
+.tree-card.rarity-epic .tree-icon { color: var(--rarity-epic-color); }
+.tree-card.rarity-legendary .tree-icon { color: var(--rarity-legendary-color); }
+
+.tree-card.seed { border-color: var(--stage-seed-color); background-color: color-mix(in srgb, var(--stage-seed-color) 10%, transparent); }
+.tree-card.seed .tree-icon { color: var(--stage-seed-color); }
+
+.tree-card.seedling { border-color: var(--stage-seedling-color); background-color: color-mix(in srgb, var(--stage-seedling-color) 10%, transparent); }
+.tree-card.seedling .tree-icon { color: var(--stage-seedling-color); }
+
+.stage-badge {
+    position: absolute;
+    top: -1px;
+    right: 10px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0 0 8px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+}
+.dark-mode .stage-badge { color: var(--container-bg); }
+
+.stage-badge.seed { background-color: var(--stage-seed-color); }
+.stage-badge.seedling { background-color: var(--stage-seedling-color); }
+/* END: This is the new change */
+
+.tree-card.active {
+    border-width: 2px;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 50%, transparent);
+}
+
+.active-tree-indicator {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    color: var(--primary-color);
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+.active-tree-indicator i { width: 1em; height: 1em; }
+.active-tree-indicator span { display: none; } /* Hide text on small cards */
+
+.new-item-indicator {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    background: var(--danger-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 12px 0 12px 0;
+    animation: jiggle 0.5s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.plantation-placeholder {
+    grid-column: 1 / -1; /* Span all columns */
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+}
+.plantation-placeholder i {
+    width: 48px;
+    height: 48px;
+    color: var(--subtle-text-color);
+    margin-bottom: 1rem;
+}
+.plantation-placeholder p {
+    max-width: 40ch;
+    margin: 0 auto 1.5rem auto;
+}
+
+/* --- Tree Detail Panel --- */
+.tree-detail-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--container-bg);
+    border-top: 1px solid var(--border-color);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+    z-index: 501;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tree-detail-panel.visible {
+    transform: translateY(0);
+}
+
+.tree-info-header {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.tree-info-header h4 { margin: 0; }
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--subtle-text-color);
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.tree-info-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* --- START: This is the corrected change --- */
+.tree-basic-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.tree-basic-info .tree-icon {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-color);
+    border-radius: 16px;
+    color: var(--primary-color);
+}
+.tree-basic-info .tree-icon i {
+    width: 40px;
+    height: 40px;
+}
+.tree-basic-info .tree-stats {
+    flex-grow: 1;
+}
+.tree-basic-info .tree-stats h4,
+.tree-basic-info .tree-stats p {
+    margin: 0;
+    text-align: left;
+}
+.tree-basic-info .tree-stats h4 {
+    font-size: 1.25rem;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+.tree-basic-info .tree-stats p {
+    font-size: 0.9rem;
+    color: var(--subtle-text-color);
+}
+/* --- END: This is the corrected change --- */
+
+.info-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.info-section:last-child {
+    border-bottom: none;
+}
+.info-section h5 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-color);
+}
+.attribute-list, .material-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.attribute-list li, .material-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: var(--bg-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+.attribute-list i, .material-list i {
+    color: var(--primary-color);
+}
+.tree-actions {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background-color: var(--bg-color);
+}
+#activate-tree-btn.active {
+    background-color: var(--danger-color);
+    color: white;
+}
+#tree-plant-action {
+    padding: 1.5rem;
+    text-align: center;
+}
+#tree-plant-action p {
+    max-width: 45ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+#seedling-care-section strong {
+    font-size: 2rem;
+    color: var(--primary-color);
+    display: block;
+    margin: 1rem 0;
+}
+.care-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-width: 400px;
+    margin: 1.5rem auto 0;
+}
+#grow-tree-btn {
+    margin-top: 1.5rem;
+}
+
+.info-panel-backdrop {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.info-panel-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+/* --- End Plantation Styling --- */
+
 
 .achievement-card {
     padding: 1.5rem;
@@ -1297,26 +1679,6 @@ p.current-goal-value span {
     color: var(--primary-color);
 }
 
-.mission-card.completed .mission-icon .lucide-check-circle-2 {
-    animation: checkmarkFlyIn 0.5s ease-out;
-}
-
-@keyframes checkmarkFlyIn {
-    0% {
-        opacity: 0;
-        transform: scale(0.5) rotate(-30deg);
-    }
-
-    60% {
-        transform: scale(1.1) rotate(5deg);
-    }
-
-    100% {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-    }
-}
-
 .mission-details h4 {
     margin-bottom: 0.25rem;
 }
@@ -1372,14 +1734,6 @@ p.current-goal-value span {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.theme-card.unlocked .theme-preview.default-light {
-    background-color: #f4f7f9;
-}
-
-.theme-card.unlocked .theme-preview.default-dark {
-    background-color: #121826;
 }
 
 .theme-card h4, .sound-card p {
@@ -1462,39 +1816,29 @@ p.current-goal-value span {
     overflow: hidden; /* Hide overflow at the main container level */
 }
 
-
 .modal-overlay:not(.hidden) .modal-content {
     transform: scale(1);
 }
 
-#sale-modal .modal-content {
-    height: auto; 
-}
-
-#sale-modal-form-view {
+.modal-header {
+    flex-shrink: 0;
     display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 85vh;
-}
-
-#sale-modal-form-view form {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 0 1.5rem;
-    margin-bottom: 1rem;
-}
-
-#sale-modal-form-view .modal-header {
-    flex-shrink: 0;
+    justify-content: space-between;
+    align-items: center;
     padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h2 { margin: 0; font-size: 1.25rem; text-align: left; }
+.modal-footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-color);
 }
 
-#sale-modal-form-view #confirm-sale-btn {
-    flex-shrink: 0;
-    width: calc(100% - 3rem);
-    margin: 0 1.5rem 1.5rem 1.5rem;
-}
 
 .modal-icon {
     display: inline-block;
@@ -1511,15 +1855,96 @@ p.current-goal-value span {
     margin-bottom: 0.5rem;
 }
 
-.modal-content p {
+.modal-content > p {
     margin-bottom: 1.5rem;
     padding: 0 1.5rem; /* Add padding for centered text */
 }
-
-.hidden {
-    display: none !important;
+.modal-content > .btn, .modal-content > button {
+    width: calc(100% - 3rem);
+    margin: 0 1.5rem 1.5rem;
 }
 
+/* --- START: New Daily Reward Modal Styling --- */
+.daily-reward-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.75rem;
+    padding: 1.5rem; /* Add padding around the grid */
+}
+
+.reward-card {
+    background-color: var(--bg-color);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.reward-card .day-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.reward-card .reward-icon {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.reward-card .reward-icon i {
+    width: 36px;
+    height: 36px;
+    color: var(--primary-color);
+    transition: transform 0.3s ease;
+}
+
+.reward-card .reward-text {
+    font-size: 0.8rem;
+    color: var(--subtle-text-color);
+    margin: 0;
+    line-height: 1.3;
+    min-height: 2.6em; /* Reserve space for two lines */
+}
+
+/* Today's Reward Styling */
+.reward-card.today {
+    border-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    animation: todayGlow 2s infinite;
+}
+
+.reward-card.today .reward-icon i {
+    transform: scale(1.1);
+}
+
+/* Claimed Reward Styling */
+.reward-card.claimed {
+    background-color: var(--border-color);
+    border-color: transparent;
+    opacity: 0.7;
+}
+
+.reward-card.claimed .reward-icon i {
+    color: var(--success-color);
+}
+
+.reward-card.claimed .day-label,
+.reward-card.claimed .reward-text {
+    color: var(--subtle-text-color);
+    text-decoration: line-through;
+}
+/* --- END: New Daily Reward Modal Styling --- */
 
 #toast-container {
     position: fixed;
@@ -1554,49 +1979,9 @@ p.current-goal-value span {
     stroke-width: 2.5px;
 }
 
-.toast.show .icon i {
-    animation: jiggle 0.5s ease-out;
-}
-
-.toast.info {
-    background-color: color-mix(in srgb, var(--secondary-color) 80%, var(--container-bg));
-    color: white;
-}
-
-.toast.info .icon {
-    color: white;
-}
-
 .toast.mission-complete {
-    background-color: color-mix(in srgb, var(--success-color) 80%, var(--container-bg));
+    background-color: var(--success-color);
     color: white;
-}
-
-.toast.mission-complete .icon {
-    color: white;
-}
-
-.toast.daily-bonus {
-    background-color: color-mix(in srgb, #f6ad55 80%, var(--container-bg));
-    color: white;
-}
-
-.toast.daily-bonus .icon {
-    color: white;
-}
-
-.toast.goal-set-ai {
-    background-color: color-mix(in srgb, var(--ai-goal-color) 80%, var(--container-bg));
-    color: white;
-}
-
-.toast.goal-set-ai .icon {
-    color: white;
-}
-
-.warning-text {
-    color: var(--warning-color);
-    font-weight: 700;
 }
 
 #coin-animation-container {
@@ -1619,11 +2004,279 @@ p.current-goal-value span {
     will-change: transform, opacity;
 }
 
-.coin-animation i {
-    width: 1em;
-    height: 1em;
-    stroke-width: 2.5px;
+/* --- Marketplace Tabs --- */
+.market-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
 }
+
+.market-tabs .btn {
+    /* Reset button styles to look like tabs */
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    
+    /* Apply new tab styling */
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--subtle-text-color);
+    position: relative;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px; /* Overlap the container's border-bottom */
+}
+
+/* Override general button hover effects */
+.market-tabs .btn:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+}
+
+/* Style for the active tab */
+.market-tabs .btn.active {
+    color: var(--primary-color);
+    font-weight: 700;
+    border-bottom-color: var(--primary-color);
+    background-color: transparent;
+}
+
+/* Override general button active effects */
+.market-tabs .btn:active:not(:disabled) {
+    transform: none;
+    filter: none;
+    box-shadow: none;
+}
+/* --- End Marketplace Tabs --- */
+
+/* --- START: This is the corrected change --- */
+.market-section {
+    display: none;
+}
+.market-section.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+/* --- END: This is the corrected change --- */
+
+/* --- Plantation Map Screen --- */
+#map-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.zoom-controls { display: flex; gap: 0.5rem; }
+.btn-icon-map {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.plantation-map-viewport {
+    flex-grow: 1;
+    overflow: auto;
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+}
+#plantation-map-grid {
+    display: grid;
+    gap: 5px;
+    transform-origin: top left;
+    transition: transform 0.3s ease;
+}
+.map-tree-cell {
+    width: 40px; /* Default size */
+    height: 40px; /* Default size */
+    background-color: var(--container-bg);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    position: relative;
+    font-weight: 700;
+}
+.map-tree-cell:hover {
+    transform: scale(1.1);
+    border-color: var(--primary-color);
+    z-index: 10;
+}
+.map-tree-cell.has-note::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--warning-color);
+    border-radius: 50%;
+    border: 1px solid var(--container-bg);
+}
+
+.map-tree-cell.empty-cell {
+    background-color: transparent;
+    border: 1px dashed var(--border-color);
+    opacity: 0.5;
+}
+.map-tree-cell.edit-mode.empty-cell:hover {
+    opacity: 1;
+    background-color: var(--success-color);
+}
+
+/* NEW: Breeding Slots Styling */
+.breeding-slots {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+.breeding-slots .slot {
+    flex: 1;
+    max-width: 250px;
+    text-align: center;
+}
+.breeding-slots .slot-header {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+.breeding-slots .slot-content {
+    background-color: var(--bg-color);
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+.breeding-slots .slot-content:hover {
+    border-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--primary-color) 5%, transparent);
+}
+.breeding-slots .slot-content i {
+    width: 32px;
+    height: 32px;
+    color: var(--subtle-text-color);
+}
+.breeding-slots .slot-content.selected {
+    border-style: solid;
+    border-color: var(--primary-color);
+    background-color: var(--container-bg);
+}
+.breeding-slots .slot-content.selected i {
+    color: var(--primary-color);
+}
+.breeding-slots .slot-content.selected h4,
+.breeding-slots .slot-content.selected p {
+    margin: 0;
+}
+
+/* --- Upgrades Screen Styling --- */
+#upgrades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.upgrade-card {
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: grid;
+    grid-template-areas:
+        "icon details action"
+        "icon progress action";
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.upgrade-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+}
+
+.upgrade-icon {
+    grid-area: icon;
+    background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    color: var(--primary-color);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.upgrade-icon i {
+    width: 28px;
+    height: 28px;
+}
+.upgrade-details {
+    grid-area: details;
+}
+.upgrade-details h4 {
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+.upgrade-details p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+.upgrade-progress {
+    grid-area: progress;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.upgrade-progress span {
+    font-size: 0.8rem;
+    color: var(--subtle-text-color);
+}
+.upgrade-action {
+    grid-area: action;
+}
+
+.upgrade-card.maxed-out {
+    opacity: 0.7;
+}
+
+.upgrade-card.maxed-out .upgrade-icon {
+    background-color: color-mix(in srgb, var(--success-color) 10%, transparent);
+    color: var(--success-color);
+}
+
+@media (max-width: 600px) {
+    .upgrade-card {
+        grid-template-areas:
+            "icon details"
+            "progress progress"
+            "action action";
+        grid-template-columns: auto 1fr;
+    }
+    .upgrade-action .btn {
+        width: 100%;
+    }
+}
+/* --- End Upgrades Styling --- */
+
 
 /* --- 10. Responsive Adjustments --- */
 @media (max-width: 640px) {
@@ -1658,6 +2311,10 @@ p.current-goal-value span {
     .tapping-secondary-actions-desktop {
         display: none;
     }
+
+    .tree-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
 }
 
 @media (min-width: 641px) {
@@ -1668,567 +2325,3 @@ p.current-goal-value span {
         display: grid;
     }
 }
-
-
-@media (max-width: 380px) {
-    .btn-tap {
-        width: 140px;
-        height: 140px;
-    }
-    .btn-tap i {
-        width: 40px;
-        height: 40px;
-    }
-    .btn-tap span {
-        font-size: 1rem; /* Adjust font size for smaller button */
-    }
-    .stats-grid {
-        grid-template-columns: 1fr 1fr; /* Force 2 columns on very small screens */
-    }
-    .stat-card p {
-        font-size: 1.25rem;
-    }
-}
-
-/* Daily Reward Modal */
-.daily-reward-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-    padding: 1rem;
-}
-.reward-card {
-    background-color: var(--bg-color);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.75rem 0.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    opacity: 0.6;
-}
-.reward-card .day-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-.reward-card .reward-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-.reward-card .reward-text {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-color);
-}
-.reward-card.claimed {
-    opacity: 1;
-    border-color: var(--success-color);
-    background-color: color-mix(in srgb, var(--success-color) 10%, transparent);
-}
-.reward-card.today {
-    opacity: 1;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 40%, transparent);
-    transform: scale(1.05);
-}
-#claim-daily-reward-btn {
-    margin: 0 1rem 1rem 1rem;
-    width: calc(100% - 2rem);
-}
-
-/* --- Plantation & Breeding & Marketplace --- */
-.tree-grid, .upgrades-container, .tree-selection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-}
-.upgrades-container {
-    grid-template-columns: 1fr;
-}
-.plantation-placeholder {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 2rem;
-    border: 2px dashed var(--border-color);
-    border-radius: 12px;
-}
-.plantation-placeholder i {
-    width: 48px;
-    height: 48px;
-    color: var(--subtle-text-color);
-    margin-bottom: 1rem;
-}
-.tree-card {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    overflow: hidden;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    position: relative;
-    background-color: var(--container-bg);
-}
-.tree-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--card-shadow-hover);
-}
-.tree-card.active {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 40%, transparent);
-}
-.active-tree-indicator {
-    position: absolute;
-    top: 8px; right: 8px;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    z-index: 2;
-}
-.dark-mode .active-tree-indicator {
-    color: var(--container-bg);
-}
-.stage-badge {
-    position: absolute;
-    top: 8px; left: 8px;
-    padding: 0.25rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    z-index: 2;
-    color: white;
-}
-.stage-badge.seed { background-color: var(--stage-seed-color); }
-.stage-badge.seedling { background-color: var(--stage-seedling-color); }
-
-.tree-card-main {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-}
-.tree-card-footer {
-    padding: 1rem;
-    border-top: 1px solid var(--border-color);
-    min-height: 80px; /* Ensure footer has space */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.tree-card .tree-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-}
-.tree-card h4 { margin-bottom: 0.25rem; }
-.tree-card p { margin: 0; font-size: 0.875rem; color: var(--subtle-text-color); }
-
-.tree-exp-bar-container {
-    height: 6px;
-    width: 80%;
-    margin: 0.5rem auto 0;
-    background-color: var(--border-color);
-    border-radius: 3px;
-    overflow: hidden;
-}
-.tree-exp-bar {
-    height: 100%;
-    background-color: var(--xp-bar-fill);
-    transition: width 0.3s ease;
-}
-.tree-exp-label {
-    font-size: 0.75rem !important;
-    margin-top: 0.25rem !important;
-}
-.tree-info-text {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-weight: 500;
-}
-.ready-to-plant { color: var(--success-color); }
-.growth-countdown.ready-to-grow { color: var(--primary-color); animation: pulse 1.5s infinite; }
-
-/* Rarity Colors */
-.rarity-common { border-left: 4px solid var(--rarity-common-color); }
-.rarity-uncommon { border-left: 4px solid var(--rarity-uncommon-color); }
-.rarity-rare { border-left: 4px solid var(--rarity-rare-color); }
-.rarity-epic { border-left: 4px solid var(--rarity-epic-color); }
-.rarity-legendary { border-left: 4px solid var(--rarity-legendary-color); }
-.tree-card.seed { border-left: 4px solid var(--stage-seed-color); }
-.tree-card.seedling { border-left: 4px solid var(--stage-seedling-color); }
-
-.info-panel-backdrop {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 50;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-.info-panel-backdrop.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-.tree-detail-panel {
-    position: fixed;
-    bottom: 0; left: 0;
-    width: 100%;
-    max-width: 800px;
-    left: 50%;
-    transform: translate(-50%, 100%);
-    background-color: var(--container-bg);
-    border-top: 1px solid var(--border-color);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -10px 30px -5px rgba(0,0,0,0.2);
-    z-index: 51;
-    transition: transform 0.3s ease;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-}
-.tree-detail-panel.visible {
-    transform: translate(-50%, 0);
-}
-.tree-info-header {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-.tree-info-header h4 {
-    margin: 0;
-}
-.btn-close {
-    background: none;
-    border: none;
-    color: var(--subtle-text-color);
-    cursor: pointer;
-    padding: 0.5rem;
-}
-.tree-info-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-}
-.tree-basic-info {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-.tree-basic-info .tree-icon {
-    font-size: 4rem;
-    color: var(--primary-color);
-}
-.tree-stats h4, .tree-stats p { margin: 0; }
-.tree-info-body h5 {
-    font-size: 1rem;
-    margin: 1.5rem 0 0.75rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.attribute-list, .material-list {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-.attribute-list li, .material-list li {
-    background-color: var(--bg-color);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-.tree-actions {
-    margin-top: 1.5rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1rem;
-}
-#activate-tree-btn.active {
-    background-color: var(--success-color);
-    color: white;
-}
-.tree-plant-action {
-    margin-top: 1.5rem;
-    text-align: center;
-}
-.tree-plant-action #growth-countdown {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 0.5rem 0 1rem 0;
-}
-.care-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-/* Breeding Screen */
-.breeding-slots {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-.slot { text-align: center; }
-.slot-content {
-    width: 150px;
-    height: 150px;
-    border: 2px dashed var(--border-color);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.slot-content:hover {
-    border-color: var(--primary-color);
-    background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
-}
-.slot-content i {
-    width: 48px;
-    height: 48px;
-    color: var(--subtle-text-color);
-}
-.slot-content.selected {
-    border-style: solid;
-    border-color: var(--primary-color);
-}
-.slot-content.selected h4 { margin-top: 0.5rem; margin-bottom: 0.25rem; }
-.slot-content.selected p { font-size: 0.8rem; }
-#material-for-breeding-list {
-    background-color: var(--bg-color);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-}
-#material-for-breeding-list h5 { margin-bottom: 0.5rem; }
-#material-for-breeding-list ul {
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-#material-for-breeding-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.breeding-result-panel {
-    border: 1px solid var(--success-color);
-    background-color: color-mix(in srgb, var(--success-color) 10%, transparent);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-top: 1.5rem;
-}
-.breeding-result-panel.anim-reveal {
-    animation: fadeIn 0.5s ease-out;
-}
-.result-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    text-align: left;
-    margin: 1rem 0;
-}
-.result-content i {
-    font-size: 3rem;
-    color: var(--success-color);
-}
-
-/* Tree Selection Modal */
-.modal-header {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-.modal-header h2 { margin: 0; font-size: 1.25rem; }
-#tree-selection-list {
-    padding: 1.5rem;
-    overflow-y: auto;
-    flex-grow: 1;
-}
-.tree-selection-card {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-.tree-selection-card:hover {
-    border-color: var(--primary-color);
-    background-color: var(--bg-color);
-}
-.tree-selection-card.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background-color: var(--bg-color);
-}
-.tree-selection-card .tree-icon { font-size: 2rem; }
-.tree-selection-card h4, .tree-selection-card p { margin: 0; }
-.stage-badge-small {
-    position: absolute;
-    top: 4px; left: 4px;
-    padding: 0.1rem 0.4rem;
-    border-radius: 1rem;
-    font-size: 0.6rem;
-    font-weight: 700;
-    z-index: 2;
-    color: white;
-}
-.stage-badge-small.seed { background-color: var(--stage-seed-color); }
-.stage-badge-small.seedling { background-color: var(--stage-seedling-color); }
-
-/* Marketplace */
-.market-tabs {
-    display: flex;
-    gap: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 1rem;
-}
-.market-tabs .btn {
-    border-radius: 8px 8px 0 0;
-    border: 1px solid transparent;
-    border-bottom: none;
-    background-color: transparent;
-    color: var(--subtle-text-color);
-    position: relative;
-    top: 1px;
-}
-.market-tabs .btn.active {
-    background-color: var(--container-bg);
-    color: var(--primary-color);
-    border-color: var(--border-color);
-    font-weight: 700;
-}
-.market-section { display: none; }
-.market-section.active { display: block; }
-.tree-card .tree-attributes-preview {
-    font-size: 0.8rem;
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    color: var(--subtle-text-color);
-}
-.tree-card .btn-buy {
-    margin: 1rem auto 0;
-}
-.sell-modal-info .tree-card {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 1rem;
-    gap: 1rem;
-    cursor: default;
-}
-.sell-modal-info .tree-card:hover {
-    transform: none;
-    box-shadow: none;
-}
-.sell-pricing {
-    padding: 1.5rem;
-}
-.price-details {
-    margin-top: 1rem;
-    text-align: right;
-}
-
-/* Sale Modal */
-#sale-modal-result-view h2 { margin-top: 1rem; }
-#sale-modal-result-view .summary-card {
-    border-radius: 12px;
-}
-
-/* Upgrades Screen */
-.upgrades-container .upgrade-card {
-    display: grid;
-    grid-template-areas:
-        "icon details action"
-        "icon progress action";
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background-color: var(--container-bg);
-}
-.upgrade-card.maxed-out {
-    background-color: color-mix(in srgb, var(--success-color) 5%, transparent);
-}
-.upgrade-icon { grid-area: icon; font-size: 2rem; color: var(--primary-color); }
-.upgrade-details { grid-area: details; }
-.upgrade-details h4 { margin-bottom: 0.25rem; }
-.upgrade-details p { margin: 0; font-size: 0.9rem; }
-.upgrade-progress { grid-area: progress; display: flex; flex-direction: column; gap: 0.25rem; }
-.upgrade-progress span { font-size: 0.8rem; color: var(--subtle-text-color); }
-.upgrade-action { grid-area: action; }
-
-/* --- START: Notification Indicator Styles --- */
-.notification-dot {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 10px;
-    height: 10px;
-    background-color: var(--danger-color);
-    border: 2px solid var(--container-bg);
-    border-radius: 50%;
-    transform: translate(40%, -40%);
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    opacity: 1;
-}
-
-.notification-dot.hidden {
-    transform: scale(0);
-    opacity: 0;
-}
-
-.new-item-indicator {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background-color: var(--danger-color);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.2rem 0.5rem;
-    border-radius: 1rem;
-    z-index: 3; /* Ensure it's above stage-badge if both exist */
-    animation: pulse 1.5s infinite;
-}
-
-/* Override stage-badge if new-item-indicator is present */
-.tree-card:has(.new-item-indicator) .stage-badge {
-    display: none;
-}
-/* --- END: Notification Indicator Styles --- */

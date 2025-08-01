@@ -253,6 +253,7 @@ function handleBuyTree(listing) {
         // Add tree to player's inventory (reset some properties)
         const purchasedTree = { ...listing.tree };
         purchasedTree.treeId = `tree_${Date.now()}_bought`; // Assign new unique ID
+        purchasedTree.isNew = true; // Mark as new for notification system
         state.playerTrees.push(purchasedTree);
         saveStateObject('playerTrees', state.playerTrees);
 

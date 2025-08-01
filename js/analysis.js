@@ -252,12 +252,17 @@ export function getAITreeSuggestion() {
     const DEFAULT_SUGGESTION = 100; // Default if not enough data
     const MINIMUM_SUGGESTION = 50; // Don't suggest a very low number
 
+    // --- START: This is the new change ---
+    // Priority 1: If plantation size is defined, use that as the goal.
+    if (plantationSize && plantationSize > 0) {
+        return plantationSize;
+    }
+    // --- END: This is the new change ---
+
     let suggestedAmount = DEFAULT_SUGGESTION;
 
-    // Logic for returning a suggestion based on history or plantation size
-    if (plantationSize && plantationSize > 0) {
-        suggestedAmount = Math.round(plantationSize / 10) * 10;
-    } else if (sessionHistory && sessionHistory.length >= MIN_SESSIONS_FOR_SUGGESTION) {
+    // --- START: This logic is now a fallback ---
+    if (sessionHistory && sessionHistory.length >= MIN_SESSIONS_FOR_SUGGESTION) {
         // Get the last N sessions to analyze recent trends.
         const recentSessions = sessionHistory.slice(-LOOKBACK_SESSIONS);
         
@@ -274,6 +279,8 @@ export function getAITreeSuggestion() {
             suggestedAmount = Math.round(averageTrees / 10) * 10;
         }
     }
+    // --- END: This logic is now a fallback ---
+
 
     // Final check to ensure the suggestion is not below our defined minimum.
     if (suggestedAmount < MINIMUM_SUGGESTION) {

@@ -61,41 +61,39 @@ export function generateNewMissions() {
                 if (target < 20) target = 20; 
                 break;
             // NEW: Cases for Plantation/Breeding Missions
-            case 'collect_x_materials':
-                // Target for collecting materials, e.g., 10 materials
-                target = 10;
+            case 'perform_x_fusions':
+                // Target for performing a number of fusions
+                target = 1;
                 break;
             case 'own_x_rare_trees':
                 // Target for owning a number of rare trees
-                target = 2; // Example: Own 2 Rare trees
+                target = (state.playerTrees || []).filter(t => t.rarity === 'Rare').length + 1; // Target is to get one more
+                if (target < 2) target = 2;
                 break;
-            case 'perform_x_fusions':
-                // Target for performing a number of fusions
+            case 'upgrade_any_tree':
                 target = 1;
                 break;
             // Add cases for other mission types/IDs if they require specific target generation
         }
 
         let missionText = template.text.replace('{target}', target);
-        // If it's a dynamic target like 'beat_last_avg', ensure the text updates with the calculated target.
-        // This is handled above for 'beat_last_avg' within its case.
-
+        
         newMissions.push({
             id: template.id,
-            text: missionText, // Use the updated text with dynamic target
+            text: missionText,
             target: target,
             key: template.key,
-            type: template.type, // Make sure type is included
-            comparison: template.comparison || 'more', // Default comparison is 'more'
+            type: template.type,
+            comparison: template.comparison || 'more',
             reward: template.reward,
             completed: false,
-            progress: 0 // Initialize progress for UI display
+            progress: 0
         });
     }
 
     state.activeMissions = newMissions; 
     saveStateObject('activeMissions', state.activeMissions);
-    saveStateItem('lastMissionCheckDate', today); // Use a distinct key for this system
+    saveStateItem('lastMissionCheckDate', today);
 }
 
 /**
@@ -106,78 +104,64 @@ export function generateNewMissions() {
 export function checkMissionCompletion(sessionStats) {
     if (!state.activeMissions) return;
 
-    let totalCoinsEarned = 0; // Accumulate coins from all missions completed in this check
+    let totalCoinsEarned = 0;
+    let missionCompleted = false;
 
     state.activeMissions.forEach(mission => {
-        if (mission.completed) return; // Skip if already completed
+        if (mission.completed) return;
 
         let isComplete = false;
         let currentValue = 0;
         
-        // --- Determine the source of data based on mission type ---
         switch (mission.type) {
             case 'session':
-                if (sessionStats) { // Ensure sessionStats is provided for this type
+                if (sessionStats) {
                     currentValue = sessionStats[mission.key];
+                    if (mission.key === 'totalTime') currentValue /= 60; // Convert seconds to minutes for this mission
                 }
                 break;
             case 'cumulative':
-                // Cumulative missions check against the player's overall state
                 if (mission.key === 'totalRareTrees') {
                     currentValue = (state.playerTrees || []).filter(tree => tree.rarity === 'Rare').length;
                 }
-                // Add other cumulative checks here, e.g., total materials collected
                 break;
             case 'action':
-                // Action-based missions are checked when the action occurs (e.g., in breeding.js)
-                // This part of the function might not be called for action missions,
-                // but we handle it here for completeness if needed.
-                currentValue = mission.progress; // Assume progress is updated elsewhere
+                // This is handled by checkActionMission, but we check progress here too.
+                currentValue = mission.progress;
                 break;
             default:
-                console.warn(`Unknown mission type: ${mission.type}`);
                 return;
         }
 
-        if (currentValue === undefined || currentValue === null) {
-            // This is a soft warning, as not all mission types are checked on session end
-            if (mission.type === 'session') {
-                console.warn(`Mission '${mission.id}' depends on key '${mission.key}', but it's missing in sessionStats.`);
-            }
-            return; 
-        }
+        if (currentValue === undefined || currentValue === null) return; 
 
-        // Perform comparison based on mission's `comparison` type
         if (mission.comparison === 'less') {
-            if (currentValue < mission.target) isComplete = true;
-        } else { // Default to 'more' or 'equal'
+            if (currentValue < mission.target && currentValue > 0) isComplete = true; // Added > 0 check for avgTime
+        } else {
             if (currentValue >= mission.target) isComplete = true;
         }
 
         if (isComplete) {
             mission.completed = true;
-            mission.progress = mission.target; // Set progress to target to show completion
+            mission.progress = mission.target;
             totalCoinsEarned += mission.reward;
-            // Show a toast for each completed mission
+            missionCompleted = true;
             showToast({ title: `สำเร็จภารกิจ! +${mission.reward.toLocaleString()} เหรียญ`, lucideIcon: 'check-circle', customClass: 'mission-complete' });
             
-            // Play mission complete sound
             if (state.animationEffectsEnabled && dom.missionCompleteSound) { 
-                dom.missionCompleteSound.currentTime = 0; // Rewind for immediate replay
-                dom.missionCompleteSound.play().catch(e => console.error("Mission complete sound failed:", e));
+                dom.missionCompleteSound.currentTime = 0;
+                dom.missionCompleteSound.play().catch(e => console.error("Sound failed:", e));
             }
-        } else {
-             // Update progress if not completed, for UI display
-             // Ensure progress is capped at target to avoid exceeding it visually
+        } else if (mission.type !== 'action') {
              mission.progress = Math.min(currentValue, mission.target);
         }
     });
 
-    if (totalCoinsEarned > 0) {
+    if (missionCompleted) {
         state.userCoins += totalCoinsEarned; 
-        saveStateItem('userCoins', state.userCoins); // Save total earned coins
+        saveStateItem('userCoins', state.userCoins);
     }
-    saveStateObject('activeMissions', state.activeMissions); // Save updated mission states
+    saveStateObject('activeMissions', state.activeMissions);
 }
 
 /**
@@ -188,34 +172,33 @@ export function checkMissionCompletion(sessionStats) {
 export function checkActionMission(actionId) {
     if (!state.activeMissions) return;
     
-    // Find missions that are triggered by this action
-    const relevantMissions = state.activeMissions.filter(m => m.key === actionId && !m.completed);
-
-    if (relevantMissions.length > 0) {
-        let missionCompleted = false;
-        let totalCoinsEarned = 0;
-
-        relevantMissions.forEach(mission => {
-            mission.progress = (mission.progress || 0) + 1; // Increment progress
-            
-            if (mission.progress >= mission.target) {
-                mission.completed = true;
-                missionCompleted = true; // Flag that at least one mission was completed
-                
-                totalCoinsEarned += mission.reward;
-                showToast({ title: `สำเร็จภารกิจ! +${mission.reward.toLocaleString()} เหรียญ`, lucideIcon: 'check-circle', customClass: 'mission-complete' });
-                
-                if (state.animationEffectsEnabled && dom.missionCompleteSound) {
-                    dom.missionCompleteSound.currentTime = 0;
-                    dom.missionCompleteSound.play().catch(e => console.error("Sound failed:", e));
-                }
-            }
-        });
-        
-        if (missionCompleted) {
-            state.userCoins += totalCoinsEarned;
-            saveStateItem('userCoins', state.userCoins);
+    let missionCompletedThisAction = false;
+    let totalCoinsEarned = 0;
+    
+    state.activeMissions.forEach(mission => {
+        if (mission.completed || mission.type !== 'action' || mission.key !== actionId) {
+            return;
         }
-        saveStateObject('activeMissions', state.activeMissions); // Save progress regardless
+        
+        mission.progress = (mission.progress || 0) + 1;
+        
+        if (mission.progress >= mission.target) {
+            mission.completed = true;
+            missionCompletedThisAction = true;
+            totalCoinsEarned += mission.reward;
+            showToast({ title: `สำเร็จภารกิจ! +${mission.reward.toLocaleString()} เหรียญ`, lucideIcon: 'check-circle', customClass: 'mission-complete' });
+            
+            if (state.animationEffectsEnabled && dom.missionCompleteSound) {
+                dom.missionCompleteSound.currentTime = 0;
+                dom.missionCompleteSound.play().catch(e => console.error("Sound failed:", e));
+            }
+        }
+    });
+        
+    if (missionCompletedThisAction) {
+        state.userCoins += totalCoinsEarned;
+        saveStateItem('userCoins', state.userCoins);
     }
+    // Save progress regardless of completion
+    saveStateObject('activeMissions', state.activeMissions);
 }

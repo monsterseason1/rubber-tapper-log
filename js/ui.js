@@ -8,16 +8,16 @@
 */
 
 import * as dom from './dom.js';
-import { state, sessionState, saveStateItem } from './state.js';
+import { state, sessionState, saveStateObject } from './state.js';
 import { calculateStreak, getAICoachTip, getXpForNextLevel, calculateSalesAnalytics, calculateLastSaleAnalysis } from './analysis.js'; 
 import { gameData } from './gameDataService.js';
 import { renderPlantation } from './plantation.js';
-import { initializeBreedingScreen } from './breeding.js';
 
+let currentMapZoom = 1.0;
+let selectedMapTreeId = null;
+let isMapEditMode = false;
 let avgTimeChartInstance = null;
 let treesTappedChartInstance = null;
-const mainHeader = document.querySelector('.main-header');
-
 
 // --- START: New Notification Logic ---
 
@@ -353,7 +353,7 @@ export function applyPurchasedTheme(themeId) {
         });
     }
     
-    saveStateItem('activeTheme', themeId); 
+    saveStateObject('activeTheme', themeId); 
     if (dom.dashboardScreen && dom.dashboardScreen.classList.contains('active')) {
         renderDashboardCharts();
     }
@@ -428,7 +428,7 @@ export function applyPurchasedSoundPack(soundPackId) {
     if (dom.achievementSound) dom.achievementSound.src = soundPack.sounds.achievement;
     if (dom.missionCompleteSound) dom.missionCompleteSound.src = soundPack.sounds.mission;
     
-    saveStateItem('activeSoundPack', soundPackId);
+    saveStateObject('activeSoundPack', soundPackId);
 }
 
 /**
@@ -450,6 +450,7 @@ export function updateAnimationToggle() {
  * @param {boolean} [isTapping=false] Flag to indicate if we are in the active tapping state.
  */
 export function showScreen(screenToShow, isInitialLoad = false, isTapping = false) {
+    const mainHeader = document.querySelector('.main-header');
     dom.allScreens.forEach(screen => screen.classList.remove('active'));
     screenToShow.classList.add('active');
     
@@ -484,28 +485,35 @@ export function showScreen(screenToShow, isInitialLoad = false, isTapping = fals
  * Adjusts the visibility and content of setup screen elements based on user history.
  */
 export function adjustSetupScreenForUser() {
-    if (!dom.setupScreen) return;
+    if (!dom.setupScreen || !dom.plantationMapBtn || !dom.startSessionBtn) return;
 
-    const isNewUser = !state.sessionHistory || state.sessionHistory.length === 0;
-    const inputGroup = dom.totalTreesInput.parentElement;
-    const logSaleBtn = dom.logSaleBtn;
-
-    // Always hide the manual input group as it's deprecated
-    if (inputGroup) inputGroup.classList.add('hidden');
+    const hasMap = state.realPlantationLayout && state.realPlantationLayout.length > 0;
     
-    // Adjust the main start button text and visibility of sale button
-    if (isNewUser) {
-        dom.startSessionBtn.innerHTML = '<i data-lucide="play-circle"></i> เริ่มบันทึกครั้งแรก!';
-        if(logSaleBtn) logSaleBtn.style.display = 'none';
+    // Manage Map Button state
+    if (hasMap) {
+        dom.plantationMapBtn.innerHTML = '<i data-lucide="eye"></i> ดู/แก้ไขแผนที่สวน';
+        dom.plantationMapBtn.classList.remove('active-mode');
+    } else {
+        if (state.isMappingModeActive) {
+            dom.plantationMapBtn.innerHTML = '<i data-lucide="map-off"></i> ปิดโหมดสร้างแผนที่';
+            dom.plantationMapBtn.classList.add('active-mode');
+        } else {
+            dom.plantationMapBtn.innerHTML = '<i data-lucide="map"></i> สร้างแผนที่สวน';
+            dom.plantationMapBtn.classList.remove('active-mode');
+        }
+    }
+
+    // Manage Start Session Button state
+    if (state.isMappingModeActive) {
+        const nextTreeNum = (state.realPlantationLayout?.length || 0) + (sessionState.tappedTrees || 0) + 1;
+        dom.startSessionBtn.innerHTML = `<i data-lucide="map-pin"></i> เริ่มสร้างแผนที่ (ต้นที่ ${nextTreeNum})`;
+        dom.startSessionBtn.classList.add('mapping-active');
     } else {
         dom.startSessionBtn.innerHTML = '<i data-lucide="play-circle"></i> เริ่มบันทึกการกรีด';
-        if(logSaleBtn) logSaleBtn.style.display = 'flex';
+        dom.startSessionBtn.classList.remove('mapping-active');
     }
     
-    // Refresh icons for the buttons
-    lucide.createIcons({
-        nodes: [dom.startSessionBtn, logSaleBtn].filter(Boolean).map(el => el.querySelector('i')).filter(Boolean)
-    });
+    lucide.createIcons({ nodes: [dom.plantationMapBtn, dom.startSessionBtn].map(el => el.querySelector('i')).filter(Boolean) });
 }
 
 
@@ -579,7 +587,6 @@ function updateProgressBar(tapped, total) {
  * Updates all UI elements on the main tapping (prep) screen based on the current session state.
  */
 export function updateTappingScreenUI() {
-    // --- START: Reworked UI Logic ---
     const { 
         tappedTrees, // This is from sessionState, representing trees tapped in THIS sub-session
         totalTrees, // This is the session goal
@@ -589,12 +596,29 @@ export function updateTappingScreenUI() {
         previousLapTime 
     } = sessionState;
 
+    const isMapping = state.isMappingModeActive;
+
+    // Toggle visibility of mapping vs regular tapping controls
+    dom.startTappingTreeBtn.classList.toggle('hidden', isMapping);
+    dom.mappingControls.classList.toggle('hidden', !isMapping);
+    dom.mappingUndoBtn.disabled = !isMapping || (sessionState.mapLayout?.length || 0) <= 1;
+
     const totalTappedInCycle = state.tappedTreesInCurrentCycle + tappedTrees;
 
     // Update tree counters and progress bar
-    if (dom.currentTreeNumberSpan) dom.currentTreeNumberSpan.textContent = totalTappedInCycle + 1;
+    const nextTreeNumber = isMapping ? (sessionState.mapLayout?.length || 0) : totalTappedInCycle + 1;
+    if (dom.currentTreeNumberSpan) {
+        dom.currentTreeNumberSpan.textContent = nextTreeNumber;
+    }
+    // --- START: THIS IS THE BUG FIX ---
+    if (dom.startTappingTreeBtn) {
+        const buttonTextSpan = dom.startTappingTreeBtn.querySelector('span');
+        if (buttonTextSpan) {
+            buttonTextSpan.textContent = `กรีดต้นที่ ${nextTreeNumber}`;
+        }
+    }
+    // --- END: THIS IS THE BUG FIX ---
     if (dom.totalTreesDisplaySpan) {
-        // The display now ALWAYS shows the session goal.
         dom.totalTreesDisplaySpan.textContent = totalTrees;
     }
     updateProgressBar(tappedTrees, totalTrees);
@@ -609,14 +633,11 @@ export function updateTappingScreenUI() {
         }
     }
     
-    // Update loot display (no change here)
     renderSessionLoot(sessionLoot);
 
-    // Update real-time stats (no change here)
     if (dom.rtAvgTimeSpan) dom.rtAvgTimeSpan.textContent = currentAvgTime.toFixed(2);
     if (dom.rtLastLapTimeSpan) dom.rtLastLapTimeSpan.textContent = lastLapTime.toFixed(2);
     
-    // Update pacing indicator (no change here)
     if (dom.rtPacingIcon && tappedTrees > 1 && previousLapTime > 0) {
         const parentP = dom.rtLastLapTimeSpan.parentElement;
         parentP.classList.remove('faster', 'slower');
@@ -636,29 +657,13 @@ export function updateTappingScreenUI() {
         const parentP = dom.rtLastLapTimeSpan.parentElement;
         parentP.classList.remove('faster', 'slower');
     }
-
-    // Update button states
-    const startButtonSpan = dom.startTappingTreeBtn.querySelector('span');
-    if (startButtonSpan) {
-        startButtonSpan.textContent = `กรีดต้นที่ ${totalTappedInCycle + 1}`;
-    }
     
-    if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = false;
-    if (dom.endSessionBtn) dom.endSessionBtn.disabled = false;
-    
-    // --- New logic to hide "Full Plantation" button ---
-    const isFullPlantationKnown = state.plantationSize > 0;
     const fullPlantationButtons = [dom.endSessionFullBtn, dom.endSessionFullBtnDesktop];
     fullPlantationButtons.forEach(btn => {
         if (btn) {
-            btn.style.display = isFullPlantationKnown ? 'none' : 'inline-flex';
-            btn.disabled = false;
+            btn.style.display = state.plantationSize > 0 ? 'none' : 'inline-flex';
         }
     });
-    // --- END: New logic to hide "Full Plantation" button ---
-
-    if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = false;
-    // --- END: Reworked UI Logic ---
 }
 
 function showInfoBlock(activeBlock) {
@@ -680,56 +685,35 @@ function showInfoBlock(activeBlock) {
 export function updateDynamicInfoPanel() {
     if (!dom.dynamicInfoPanel) return;
 
-    const lastSession = state.sessionHistory.length > 0 ? state.sessionHistory[state.sessionHistory.length - 1] : null;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const lastLogin = state.lastLoginDate ? new Date(state.lastLoginDate) : null;
-    if (lastLogin) lastLogin.setHours(0,0,0,0);
-
-    if (state.loginStreakCount > 0 && lastLogin && lastLogin.getTime() === today.getTime()) {
-        dom.dailyLoginStreakSpan.textContent = state.loginStreakCount;
-        const nextBonus = gameData.gameBalance.DAILY_LOGIN_BASE_COINS + ((state.loginStreakCount + 1) * gameData.gameBalance.DAILY_LOGIN_STREAK_INCREMENT); 
-        dom.dailyLoginRewardSpan.textContent = nextBonus.toLocaleString();
-        showInfoBlock(dom.infoDailyLogin);
+    // Priority 1: Map Prompt
+    const shouldShowMapPrompt = state.plantationSize > 0 && (!state.realPlantationLayout || state.realPlantationLayout.length === 0);
+    if (shouldShowMapPrompt) {
+        const sizeSpan = dom.infoMapPrompt.querySelector('p');
+        if(sizeSpan) sizeSpan.innerHTML = `คุณกำหนดขนาดสวนแล้ว (~${state.plantationSize} ต้น)! สนใจสร้างแผนผังเพื่อบันทึกข้อมูลเฉพาะของแต่ละต้นไหม?`;
+        showInfoBlock(dom.infoMapPrompt);
         return;
     }
+
+    const lastSession = state.sessionHistory.length > 0 ? state.sessionHistory[state.sessionHistory.length - 1] : null;
 
     if (state.goalAvgTime && lastSession) {
         dom.goalTextSpan.textContent = `ทำความเร็วต่ำกว่า ${state.goalAvgTime.toFixed(2)} วิ/ต้น`;
         
         let progress = 0;
-        if (state.bestAvgTime && state.bestAvgTime > state.goalAvgTime) {
+        if (lastSession.avgTime <= state.goalAvgTime) {
+            progress = 100;
+        } else if (state.bestAvgTime && state.bestAvgTime > state.goalAvgTime) {
             const range = state.bestAvgTime - state.goalAvgTime;
             const improvementNeeded = lastSession.avgTime - state.goalAvgTime;
-            if (range > 0 && improvementNeeded > 0) {
+            if (range > 0) {
                 progress = 100 - ((improvementNeeded / range) * 100);
-            } else if (lastSession.avgTime <= state.goalAvgTime) {
-                progress = 100;
             }
-        } else if (lastSession.avgTime <= state.goalAvgTime) {
-            progress = 100;
         }
         
         dom.goalProgressBar.value = Math.max(0, Math.min(100, progress)); 
         dom.goalProgressValueSpan.textContent = `ครั้งล่าสุด: ${lastSession.avgTime.toFixed(2)} วิ/ต้น`;
         showInfoBlock(dom.infoGoalProgress);
         return;
-    }
-
-    const nextAchievementKey = Object.keys(gameData.achievements).find(key => 
-        !state.unlockedAchievements.includes(key) && gameData.achievements[key].type === 'trees'
-    );
-    if (nextAchievementKey) {
-        const achievement = gameData.achievements[nextAchievementKey];
-        const progress = (state.lifetimeTrees / achievement.target) * 100;
-        if (progress > 50 && progress < 100) { 
-            dom.achievementTextSpan.textContent = achievement.title;
-            dom.achievementProgressBar.value = progress;
-            dom.achievementProgressValueSpan.textContent = `${state.lifetimeTrees.toLocaleString()}/${achievement.target.toLocaleString()}`;
-            showInfoBlock(dom.infoAchievementProgress);
-            return;
-        }
     }
     
     const streak = calculateStreak();
@@ -738,7 +722,7 @@ export function updateDynamicInfoPanel() {
         showInfoBlock(dom.infoStreak);
         return;
     }
-
+    
     const aiTip = getAICoachTip();
     dom.infoWelcome.querySelector('p').textContent = aiTip;
     showInfoBlock(dom.infoWelcome);
@@ -1166,5 +1150,141 @@ export function renderSalesDashboard() {
         dom.plantationSizeInfo.style.display = 'block';
     } else {
         dom.plantationSizeInfo.style.display = 'none';
+    }
+}
+
+// --- NEW: Plantation Map UI Functions ---
+export function showMapScreen() {
+    renderPlantationMap();
+    setupMapListeners();
+    showScreen(dom.plantationMapScreen);
+}
+
+function renderPlantationMap() {
+    const grid = dom.plantationMapGrid;
+    if (!grid) return;
+    
+    const layout = state.realPlantationLayout || [];
+    if (layout.length === 0) {
+        grid.innerHTML = `<p class="info-text">ยังไม่มีข้อมูลแผนที่</p>`;
+        return;
+    }
+
+    grid.innerHTML = '';
+
+    // Find bounds of the map
+    const xs = layout.map(t => t.x);
+    const ys = layout.map(t => t.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const cols = maxX - minX + 1;
+    const rows = maxY - minY + 1;
+
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    
+    // Create a 2D array representation for easier rendering
+    const mapMatrix = Array(rows).fill(null).map(() => Array(cols).fill(null));
+    layout.forEach(tree => {
+        const row = tree.y - minY;
+        const col = tree.x - minX;
+        mapMatrix[row][col] = tree;
+    });
+
+    // Render the grid
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const tree = mapMatrix[r][c];
+            const cell = document.createElement('div');
+            cell.dataset.x = c + minX;
+            cell.dataset.y = r + minY;
+            
+            if (tree) {
+                cell.className = 'map-tree-cell';
+                cell.dataset.treeId = tree.id;
+                cell.innerHTML = `<span>${tree.id}</span>`;
+                if (tree.note) {
+                    cell.classList.add('has-note');
+                    cell.title = tree.note;
+                }
+            } else {
+                cell.className = 'map-tree-cell empty-cell';
+            }
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function setupMapListeners() {
+    dom.mapZoomInBtn.onclick = () => updateMapZoom(0.1);
+    dom.mapZoomOutBtn.onclick = () => updateMapZoom(-0.1);
+    
+    dom.plantationMapGrid.onclick = (event) => {
+        const cell = event.target.closest('.map-tree-cell');
+        if (!cell) return;
+        
+        if (isMapEditMode) {
+            // Logic for adding/removing trees in edit mode
+        } else {
+            const treeId = cell.dataset.treeId;
+            if (treeId) {
+                showMapNoteModal(parseInt(treeId, 10));
+            }
+        }
+    };
+    
+    dom.saveMapNoteBtn.onclick = handleSaveMapNote;
+    dom.deleteMapNoteBtn.onclick = handleDeleteMapNote;
+}
+
+function updateMapZoom(delta) {
+    currentMapZoom = Math.max(0.5, Math.min(2.0, currentMapZoom + delta));
+    dom.plantationMapGrid.style.transform = `scale(${currentMapZoom})`;
+}
+
+function showMapNoteModal(treeId) {
+    selectedMapTreeId = treeId;
+    const tree = state.realPlantationLayout.find(t => t.id === treeId);
+    if (!tree) return;
+    
+    dom.mapNoteTreeIdSpan.textContent = treeId;
+    dom.mapNoteTextarea.value = tree.note || '';
+    dom.deleteMapNoteBtn.style.display = tree.note ? 'inline-flex' : 'none';
+    dom.mapAddNoteModal.classList.remove('hidden');
+    dom.mapNoteTextarea.focus();
+}
+
+export function hideMapNoteModal() {
+    dom.mapAddNoteModal.classList.add('hidden');
+    selectedMapTreeId = null;
+}
+
+function handleSaveMapNote() {
+    if (selectedMapTreeId === null) return;
+    const layout = state.realPlantationLayout || [];
+    const treeIndex = layout.findIndex(t => t.id === selectedMapTreeId);
+    if (treeIndex > -1) {
+        layout[treeIndex].note = dom.mapNoteTextarea.value.trim();
+        saveStateObject('realPlantationLayout', layout);
+        showToast({title: `บันทึกโน้ตสำหรับต้นที่ ${selectedMapTreeId} แล้ว`, lucideIcon: 'save'});
+        hideMapNoteModal();
+        renderPlantationMap(); // Re-render to show/hide note indicator
+    }
+}
+
+function handleDeleteMapNote() {
+    if (selectedMapTreeId === null) return;
+    if (confirm(`คุณต้องการลบบันทึกของต้นที่ ${selectedMapTreeId} หรือไม่?`)) {
+        const layout = state.realPlantationLayout || [];
+        const treeIndex = layout.findIndex(t => t.id === selectedMapTreeId);
+        if (treeIndex > -1) {
+            layout[treeIndex].note = "";
+            saveStateObject('realPlantationLayout', layout);
+            showToast({title: `ลบบันทึกของต้นที่ ${selectedMapTreeId} แล้ว`, lucideIcon: 'trash-2'});
+            hideMapNoteModal();
+            renderPlantationMap();
+        }
     }
 }

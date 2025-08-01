@@ -1,4 +1,4 @@
-// --- START OF FILE upgrades.js ---
+// --- START OF FILE js/upgrades.js ---
 
 /*
 ======================================
@@ -130,7 +130,7 @@ export function applyUpgradeEffect(effectType, baseValue) {
         const upgradeInfo = gameData.upgrades[upgradeId];
         const userUpgrade = state.upgrades[upgradeId];
 
-        if (upgradeInfo.effect.type === effectType && userUpgrade.level > 0) {
+        if (upgradeInfo && upgradeInfo.effect.type === effectType && userUpgrade.level > 0) {
             const effectPerLevel = upgradeInfo.effect.baseValue;
             const totalEffect = effectPerLevel * userUpgrade.level;
 
@@ -139,29 +139,20 @@ export function applyUpgradeEffect(effectType, baseValue) {
                     modifiedValue *= (1 + totalEffect);
                     break;
                 case 'speed_boost_percent': 
-                    // Example: avgTime * (1 + (-0.005)) = avgTime * 0.995
                     modifiedValue *= (1 + totalEffect);
                     break;
                 case 'record_bonus_flat':
                     modifiedValue += totalEffect;
                     break;
-                // --- NEW: Add cases for Plantation and Breeding upgrades ---
                 case 'material_drop_chance':
-                    // This type of effect is a percentage increase on a chance.
-                    // E.g., base 5% chance, upgrade gives +10%. New chance = 5% * (1 + 0.10) = 5.5%
-                    // So we multiply the base chance by (1 + totalEffect)
                     modifiedValue *= (1 + totalEffect);
                     break;
                 case 'fusion_success_chance':
-                    // This can be a flat or percentage increase on the success rate of getting a rare tree
-                    // For now, let's treat it as a flat bonus to a base chance
                     modifiedValue += totalEffect;
                     break;
                 case 'tree_xp_boost_percent':
-                    // Similar to player XP boost, but for trees
                     modifiedValue *= (1 + totalEffect);
                     break;
-                // Add other effect types here in the future
             }
         }
     }

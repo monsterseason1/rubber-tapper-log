@@ -10,7 +10,7 @@
 import { state, saveStateObject, saveStateItem } from './state.js';
 import { gameData } from './gameDataService.js';
 import * as dom from './dom.js';
-import { showScreen, showToast, formatTime } from './ui.js';
+import { showScreen, showToast, formatTime, updateNotificationIndicators } from './ui.js';
 import { applyUpgradeEffect } from './upgrades.js';
 import { initializeBreedingScreen } from './breeding.js';
 import { openSellTreeModal } from './marketplace.js';
@@ -128,14 +128,11 @@ export function renderPlantation() {
         }
         
         const isActive = state.activeTreeId === tree.treeId;
-        const isCompact = (growthStage === 'Seed' || growthStage === 'Seedling');
-        card.className = `tree-card ${stageClass} ${isActive ? 'active' : ''} ${isCompact ? 'seedling' : ''}`;
+        card.className = `tree-card ${stageClass} ${isActive ? 'active' : ''}`;
         card.dataset.treeIndex = index;
 
-        // --- START: New Indicator Logic ---
         const newItemIndicator = tree.isNew ? '<div class="new-item-indicator">ใหม่</div>' : '';
         const stageBadgeHtml = stageText ? `<div class="stage-badge ${stageClass}">${stageText}</div>` : '';
-        // --- END: New Indicator Logic ---
 
         card.innerHTML = `
             ${isActive ? '<div class="active-tree-indicator"><i data-lucide="power"></i><span>Active</span></div>' : ''}
@@ -144,7 +141,7 @@ export function renderPlantation() {
             <div class="tree-icon"><i data-lucide="${cardIcon}"></i></div>
             <h4>${treeData.name}</h4>
             <p class="tree-level">${growthStage !== 'Grown' ? tree.rarity : `Lvl ${tree.level}`}</p>
-            ${infoHtml}
+            <div class="tree-card-footer">${infoHtml}</div>
         `;
         dom.plantationGrid.appendChild(card);
     });
@@ -165,18 +162,15 @@ function handleTreeCardClick(event) {
     const tree = state.playerTrees[treeIndex];
     if (!tree) return;
     
-    // --- START: Clear 'isNew' status on interaction ---
     if (tree.isNew) {
         tree.isNew = false;
         saveStateObject('playerTrees', state.playerTrees);
-        // Remove the indicator from the DOM directly for an instant visual update
-        // without a full re-render, which could be jarring.
         const indicator = card.querySelector('.new-item-indicator');
         if (indicator) {
             indicator.remove();
         }
+        updateNotificationIndicators();
     }
-    // --- END: Clear 'isNew' status ---
 
     displayTreeInfo(tree, treeIndex);
 }
@@ -205,19 +199,18 @@ function displayTreeInfo(tree, treeIndex) {
     dom.selectedTreeLevel.textContent = tree.level;
     dom.selectedTreeMaxLevel.textContent = treeData.maxLevel || 10;
     
+    // --- START: Major Change - Simplified DOM manipulation ---
     const {
-        treeExpDisplay, treeAttributesDisplay, treeMaterialsDisplay,
-        treeActions, treePlantAction, seedPlantSection, seedlingCareSection,
+        treeGrownInfo, treePlantAction, seedPlantSection, seedlingCareSection,
         careActions, growTreeBtn
     } = dom;
 
     if (growthStage === 'Grown') {
-        treeExpDisplay.style.display = 'block';
-        treeAttributesDisplay.style.display = 'block';
-        treeMaterialsDisplay.style.display = 'block';
-        treeActions.style.display = 'grid';
+        // Show the main container for grown tree info, hide the other
+        treeGrownInfo.style.display = 'block';
         treePlantAction.style.display = 'none';
 
+        // Update grown tree info
         const currentExp = tree.exp || 0;
         const expForNext = getXpForNextLevelForTree(tree);
         const expPercentage = expForNext > 0 ? (currentExp / expForNext) * 100 : 100;
@@ -269,18 +262,18 @@ function displayTreeInfo(tree, treeIndex) {
             }
         }
     } else { // Seed or Seedling
-        treeExpDisplay.style.display = 'none';
-        treeAttributesDisplay.style.display = 'none';
-        treeMaterialsDisplay.style.display = 'none';
-        treeActions.style.display = 'none';
+        // Hide grown tree info, show the planting/caring container
+        treeGrownInfo.style.display = 'none';
         treePlantAction.style.display = 'block';
 
         if (growthStage === 'Seed') {
+            // Show only the seed planting section
             seedlingCareSection.style.display = 'none';
             seedPlantSection.style.display = 'block';
             dom.plantTreeBtn.disabled = false;
             dom.plantActionDescription.textContent = 'เริ่มต้นการปลูกเมล็ดพันธุ์นี้ให้กลายเป็นต้นกล้า';
         } else { // Seedling
+            // Show only the seedling care section
             seedPlantSection.style.display = 'none';
             seedlingCareSection.style.display = 'block';
             
@@ -309,6 +302,7 @@ function displayTreeInfo(tree, treeIndex) {
             growthTimerInterval = setInterval(updateGrowthDisplay, 1000);
         }
     }
+    // --- END: Major Change ---
 
     lucide.createIcons({ nodes: dom.treeInfoPanel.querySelectorAll('i') });
     dom.treeInfoPanel.classList.add('visible');

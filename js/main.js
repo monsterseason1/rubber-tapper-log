@@ -38,9 +38,11 @@ import {
     displaySaleResult,
     showDailyRewardModal,
     hideDailyRewardModal,
-    updateNotificationIndicators // --- START: Import the new function ---
+    updateNotificationIndicators,
+    showMapScreen,
+    hideMapNoteModal
 } from './ui.js';
-import { startSession, initiateTreeTap, finalizeTreeTap, endSession } from './session.js';
+import { startSession, initiateTreeTap, finalizeTreeTap, endSession, handleMapDirection, handleUndoLastMapping } from './session.js';
 import { generateNewMissions } from './missions.js'; 
 import { grantCoins, setAIGoal, getAITreeSuggestion } from './analysis.js';
 import { loadGameData, gameData } from './gameDataService.js';
@@ -197,21 +199,24 @@ function handleClaimReward() {
  * This function determines the goal and initiates the session.
  */
 function handleStartSession() {
-    const isNewUser = !state.sessionHistory || state.sessionHistory.length === 0;
-    let treeCountGoal;
+    // --- START: This is the new change ---
+    // The logic is now much simpler. We just ask the AI for a suggestion.
+    // The AI (in analysis.js) is now smart enough to know whether to return
+    // the plantation size or calculate a suggestion.
+    const treeCountGoal = getAITreeSuggestion();
 
-    if (isNewUser) {
-        // For new users, set a fixed starting goal.
-        treeCountGoal = 50; 
-        showToast({ title: 'เยี่ยมเลย! มาเริ่มบันทึก 50 ต้นแรกกัน', lucideIcon: 'rocket' });
+    // Show a relevant toast message based on where the suggestion came from.
+    if (state.plantationSize && state.plantationSize > 0) {
+        showToast({ title: `เริ่มรอบใหม่: กรีด ${treeCountGoal} ต้น`, lucideIcon: 'flag-checkered' });
+    } else if (!state.sessionHistory || state.sessionHistory.length === 0) {
+        showToast({ title: 'เยี่ยมเลย! มาเริ่มบันทึกกัน', lucideIcon: 'rocket' });
     } else {
-        // For existing users, get the AI-suggested goal.
-        treeCountGoal = getAITreeSuggestion();
         showToast({ title: `💡 AI แนะนำ: กรีด ${treeCountGoal} ต้น`, lucideIcon: 'lightbulb' });
     }
     
     // Pass the determined goal to the session logic.
     startSession(treeCountGoal);
+    // --- END: This is the new change ---
 }
 
 
@@ -352,6 +357,48 @@ function setupEventListeners() {
     dom.exportDataBtn.addEventListener('click', exportData);
     dom.importFileInput.addEventListener('change', importData);
     dom.resetDataBtn.addEventListener('click', resetAllData);
+    
+    // --- Plantation Map Feature ---
+    dom.plantationMapBtn.addEventListener('click', handlePlantationMapButtonClick);
+    dom.backToMainFromMapBtn.addEventListener('click', () => showScreen(dom.setupScreen));
+    if (dom.mappingControls) {
+        dom.mappingControls.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (button && button.dataset.direction) {
+                handleMapDirection(button.dataset.direction);
+            }
+        });
+    }
+    if (dom.mappingUndoBtn) {
+        dom.mappingUndoBtn.addEventListener('click', handleUndoLastMapping);
+    }
+    if(dom.infoMapPrompt) {
+        const promptBtn = dom.infoMapPrompt.querySelector('button');
+        if(promptBtn) {
+            promptBtn.addEventListener('click', () => {
+                saveStateItem('isMappingModeActive', true);
+                adjustSetupScreenForUser();
+                showToast({title: "เปิดโหมดสร้างแผนที่แล้ว!", lucideIcon: 'map'});
+            });
+        }
+    }
+    dom.closeMapNoteModalBtn.addEventListener('click', hideMapNoteModal);
+}
+
+function handlePlantationMapButtonClick() {
+    // If a map exists, show it
+    if (state.realPlantationLayout && state.realPlantationLayout.length > 0) {
+        showMapScreen();
+    } else { // Otherwise, it's the first time, so toggle mapping mode
+        const isCurrentlyMapping = state.isMappingModeActive;
+        const newMappingState = !isCurrentlyMapping;
+        saveStateItem('isMappingModeActive', newMappingState);
+        adjustSetupScreenForUser(); // Update UI based on new state
+        showToast({
+            title: newMappingState ? "เปิดโหมดสร้างแผนที่แล้ว!" : "ปิดโหมดสร้างแผนที่",
+            lucideIcon: newMappingState ? 'map' : 'map-off'
+        });
+    }
 }
 
 function handleSaleSubmit(event) {

@@ -1,4 +1,4 @@
-// --- START OF FILE dom.js ---
+// --- START OF FILE js/dom.js ---
 
 /*
 ======================================
@@ -32,6 +32,7 @@ export const plantationScreen = document.getElementById('plantation-screen');
 export const breedingScreen = document.getElementById('breeding-screen');
 export const marketplaceScreen = document.getElementById('marketplace-screen');
 export const activeTappingScreen = document.getElementById('active-tapping-screen');
+export const plantationMapScreen = document.getElementById('plantation-map-screen');
 
 
 // --- Header ---
@@ -57,6 +58,7 @@ export const plantationBtn = document.getElementById('plantation-btn');
 export const breedingNavBtn = document.getElementById('breeding-nav-btn');
 export const marketplaceNavBtn = document.getElementById('marketplace-nav-btn');
 export const logSaleBtn = document.getElementById('log-sale-btn');
+export const plantationMapBtn = document.getElementById('plantation-map-btn');
 
 
 export const dynamicInfoPanel = document.getElementById('dynamic-info-panel');
@@ -75,6 +77,7 @@ export const achievementProgressValueSpan = document.getElementById('achievement
 export const infoDailyLogin = document.getElementById('info-daily-login');
 export const dailyLoginStreakSpan = document.getElementById('daily-login-streak');
 export const dailyLoginRewardSpan = document.getElementById('daily-login-reward');
+export const infoMapPrompt = document.getElementById('info-map-prompt');
 
 
 // --- Tapping Screen (Prep Screen) & Real-time Stats ---
@@ -92,9 +95,10 @@ export const rtSessionLootContainer = document.getElementById('rt-session-loot-c
 export const rtAvgTimeSpan = document.getElementById('rt-avg-time');
 export const rtLastLapTimeSpan = document.getElementById('rt-last-lap-time');
 export const rtPacingIcon = document.getElementById('rt-pacing-icon');
-// START: This is the new change
 export const plantationSizeInfoTapping = document.getElementById('plantation-size-info-tapping');
-// END: This is the new change
+export const mainTapActionArea = document.getElementById('main-tap-action-area');
+export const mappingControls = document.getElementById('mapping-controls');
+export const mappingUndoBtn = document.getElementById('mapping-undo-btn');
 
 
 // --- Active Tapping Screen Elements ---
@@ -200,15 +204,14 @@ export const seedlingCareSection = document.getElementById('seedling-care-sectio
 export const growthCountdown = document.getElementById('growth-countdown');
 export const waterTreeBtn = document.getElementById('water-tree-btn');
 export const fertilizeTreeBtn = document.getElementById('fertilize-tree-btn');
-export const treeExpDisplay = document.querySelector('.tree-exp-display');
-export const treeAttributesDisplay = document.querySelector('.tree-attributes-display');
-export const treeMaterialsDisplay = document.querySelector('.tree-materials-display');
-export const treeActions = document.querySelector('.tree-actions');
-export const treePlantAction = document.querySelector('.tree-plant-action');
-export const seedPlantSection = document.getElementById('seed-plant-section');
-export const careActions = document.getElementById('care-actions');
-export const growTreeBtn = document.getElementById('grow-tree-btn');
+// --- START: This is the corrected change ---
+export const treeGrownInfo = document.getElementById('tree-grown-info'); // Container for grown tree details
+export const treePlantAction = document.getElementById('tree-plant-action'); // Container for seed/seedling actions
+export const seedPlantSection = document.getElementById('seed-plant-section'); // Section for the 'Plant' button
+export const careActions = document.getElementById('care-actions'); // Container for Water/Fertilize buttons
+export const growTreeBtn = document.getElementById('grow-tree-btn'); // The 'Grow up' button
 export const sellTreeBtn = document.getElementById('sell-tree-btn');
+// --- END: This is the corrected change ---
 
 
 // --- Breeding Screen elements ---
@@ -258,3 +261,17 @@ export const saleModalResultView = document.getElementById('sale-modal-result-vi
 export const saleResultPricePerKg = document.getElementById('sale-result-price-per-kg');
 export const saleResultEstIncome = document.getElementById('sale-result-est-income');
 export const saleResultNewSaleBtn = document.getElementById('sale-result-new-sale-btn');
+
+// --- Plantation Map Screen Elements ---
+export const backToMainFromMapBtn = document.getElementById('back-to-main-from-map-btn');
+export const plantationMapGrid = document.getElementById('plantation-map-grid');
+export const mapToolbar = document.getElementById('map-toolbar');
+export const mapEditBtn = document.getElementById('map-edit-btn');
+export const mapZoomInBtn = document.getElementById('map-zoom-in-btn');
+export const mapZoomOutBtn = document.getElementById('map-zoom-out-btn');
+export const mapAddNoteModal = document.getElementById('map-add-note-modal');
+export const closeMapNoteModalBtn = document.getElementById('close-map-note-modal-btn');
+export const mapNoteTextarea = document.getElementById('map-note-textarea');
+export const saveMapNoteBtn = document.getElementById('save-map-note-btn');
+export const deleteMapNoteBtn = document.getElementById('delete-map-note-btn');
+export const mapNoteTreeIdSpan = document.getElementById('map-note-tree-id-span');

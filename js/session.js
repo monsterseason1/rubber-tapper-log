@@ -104,6 +104,14 @@ function stopTimers() {
  * Starts a new tapping session.
  */
 export function startSession(treeCountGoal) {
+    // --- START: BUG FIX - Re-enable buttons on new session start ---
+    if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = false;
+    if (dom.endSessionBtn) dom.endSessionBtn.disabled = false;
+    if (dom.endSessionFullBtn) dom.endSessionFullBtn.disabled = false;
+    if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = false;
+    if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = false;
+    // --- END: BUG FIX ---
+
     const treeCount = parseInt(treeCountGoal, 10);
     if (isNaN(treeCount) || treeCount < 1) {
         showToast({title: 'เกิดข้อผิดพลาดในการตั้งเป้าหมายเซสชัน', lucideIcon: 'alert-circle'});
@@ -115,6 +123,30 @@ export function startSession(treeCountGoal) {
     sessionState.tapTimestamps.push(sessionState.startTime.getTime()); 
     sessionState.totalTrees = treeCount;
 
+    // --- New Mapping Mode Logic ---
+    if (state.isMappingModeActive) {
+        // If starting a map for the first time or continuing, load the layout.
+        sessionState.mapLayout = [...(state.realPlantationLayout || [])];
+        if (sessionState.mapLayout.length === 0) {
+            // This is the very first tree. Place it at origin (0,0).
+            const firstTree = {
+                id: 1,
+                x: 0,
+                y: 0,
+                note: ""
+            };
+            sessionState.mapLayout.push(firstTree);
+            sessionState.currentMapPosition = { x: 0, y: 0 };
+            saveStateObject('realPlantationLayout', sessionState.mapLayout);
+            state.realPlantationLayout = sessionState.mapLayout; // Sync live state
+        } else {
+            // Find the last tree to continue mapping from it.
+            const lastTree = sessionState.mapLayout[sessionState.mapLayout.length - 1];
+            sessionState.currentMapPosition = { x: lastTree.x, y: lastTree.y };
+        }
+    }
+    // --- End Mapping Mode Logic ---
+    
     // Clear previous summary screen data to prevent flashing old data
     if(dom.newRecordBadge) dom.newRecordBadge.style.display = 'none'; 
     if(dom.pacingAnalysisCard) dom.pacingAnalysisCard.style.display = 'none'; 
@@ -177,12 +209,80 @@ export function finalizeTreeTap() {
     // Reset lap start time until the next tap is initiated
     sessionState.lapStartTime = null; 
 
+    // --- START: New auto-end session logic ---
+    // Check if the plantation size is set and if the total tapped trees for the cycle reach it
+    if (state.plantationSize && state.plantationSize > 0) {
+        const totalTappedInCycle = state.tappedTreesInCurrentCycle + sessionState.tappedTrees;
+        if (totalTappedInCycle >= state.plantationSize) {
+            endSession(true); // End the session as a "full plantation"
+            return; // Exit the function to prevent showing the tapping screen again
+        }
+    }
+    // --- END: New auto-end session logic ---
+
     // --- UI Update ---
     updateTappingScreenUI();
 
     // Switch back to the prep screen
     showScreen(dom.tappingScreen);
 }
+
+/**
+ * Handles the user clicking a direction button in mapping mode.
+ * @param {string} direction - 'up', 'down', 'left', or 'right'.
+ */
+export function handleMapDirection(direction) {
+    if (!state.isMappingModeActive || !sessionState.currentMapPosition) return;
+
+    let { x, y } = sessionState.currentMapPosition;
+    switch (direction) {
+        case 'up':    y--; break;
+        case 'down':  y++; break;
+        case 'left':  x--; break;
+        case 'right': x++; break;
+    }
+
+    // Check if a tree already exists at the new coordinates
+    const isOccupied = sessionState.mapLayout.some(tree => tree.x === x && tree.y === y);
+    if (isOccupied) {
+        showToast({ title: "ตำแหน่งนี้มีต้นไม้อยู่แล้ว!", lucideIcon: 'alert-triangle' });
+        return;
+    }
+    
+    // Add the new tree to the session's map layout
+    const newTree = {
+        id: sessionState.mapLayout.length + 1,
+        x: x,
+        y: y,
+        note: ""
+    };
+    sessionState.mapLayout.push(newTree);
+    sessionState.currentMapPosition = { x, y };
+
+    // Now, initiate the regular tapping process for this new tree
+    initiateTreeTap();
+}
+
+/**
+ * Handles the "Undo" button click during mapping.
+ */
+export function handleUndoLastMapping() {
+    if (!state.isMappingModeActive || !sessionState.mapLayout || sessionState.mapLayout.length <= 1) {
+        showToast({ title: "ไม่สามารถย้อนกลับได้อีก", lucideIcon: 'info' });
+        return;
+    }
+    // Remove the last tree added
+    sessionState.mapLayout.pop();
+
+    // Reset the current position to the new last tree
+    const lastTree = sessionState.mapLayout[sessionState.mapLayout.length - 1];
+    sessionState.currentMapPosition = { x: lastTree.x, y: lastTree.y };
+    
+    // Update the UI to reflect the change
+    updateTappingScreenUI();
+    showToast({ title: "ย้อนกลับการวางตำแหน่งล่าสุด", lucideIcon: 'rotate-ccw' });
+}
+
 
 /**
  * Checks for material/seed drops and updates the session loot state.
@@ -250,6 +350,18 @@ export function endSession(isFullPlantation = false) {
     if (dom.endSessionFullBtn) dom.endSessionFullBtn.disabled = true;
     if (dom.endSessionBtnDesktop) dom.endSessionBtnDesktop.disabled = true;
     if (dom.endSessionFullBtnDesktop) dom.endSessionFullBtnDesktop.disabled = true;
+
+    // --- Finalize Mapping Data ---
+    if (state.isMappingModeActive) {
+        saveStateObject('realPlantationLayout', sessionState.mapLayout);
+        state.realPlantationLayout = sessionState.mapLayout; // Sync live state
+        // Optional: Automatically turn off mapping mode when a full plantation is mapped
+        if (isFullPlantation) {
+            saveStateItem('isMappingModeActive', false);
+            showToast({ title: "สร้างแผนที่สวนสำเร็จ!", lucideIcon: 'map-pin', customClass: 'mission-complete' });
+        }
+    }
+    // --- End Finalize Mapping Data ---
 
     // --- START: New logic for cycle handling ---
     // Add the trees from this sub-session to the total for the current cycle

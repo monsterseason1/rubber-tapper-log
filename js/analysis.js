@@ -13,10 +13,10 @@ import { gameData } from './gameDataService.js';
 import { applyUpgradeEffect } from './upgrades.js'; // Import for upgrade system
 
 /**
- * NEW: Helper function to get the currently active tree object from state.
+ * EXPORTED: Helper function to get the currently active tree object from state.
  * @returns {object|null} The active tree object or null if none is active.
  */
-function getActiveTree() {
+export function getActiveTree() {
     if (!state.activeTreeId || !state.playerTrees) {
         return null;
     }
@@ -241,54 +241,52 @@ export function setAIGoal() {
 }
 
 /**
+ * --- START: REVISED FUNCTION ---
  * Provides an intelligent suggestion for the number of trees to tap for the day.
  * It's based on the user's recent activity to provide a realistic goal.
  * @returns {number} A suggested number of trees, rounded to a sensible value.
  */
 export function getAITreeSuggestion() {
-    const { sessionHistory, plantationSize } = state;
-    const MIN_SESSIONS_FOR_SUGGESTION = 3;
-    const LOOKBACK_SESSIONS = 7; // Look at the last 7 sessions
-    const DEFAULT_SUGGESTION = 100; // Default if not enough data
+    const { sessionHistory, plantationSize, tappedTreesInCurrentCycle } = state;
+    const LOOKBACK_SESSIONS = 7; 
+    const DEFAULT_SUGGESTION = 100; // Default if not enough data or for chunking
     const MINIMUM_SUGGESTION = 50; // Don't suggest a very low number
 
-    // --- START: This is the new change ---
-    // Priority 1: If plantation size is defined, use that as the goal.
+    // Priority 1: Smart logic for a defined plantation size.
     if (plantationSize && plantationSize > 0) {
-        return plantationSize;
+        const treesRemaining = plantationSize - (tappedTreesInCurrentCycle || 0);
+
+        // If the cycle is complete or somehow over-tapped, suggest a full new round.
+        if (treesRemaining <= 0) {
+            return plantationSize;
+        }
+
+        // If in the middle of a cycle, suggest a manageable chunk or what's left.
+        // e.g., if 180 are left, suggest 100. If 70 are left, suggest 70.
+        return Math.min(treesRemaining, DEFAULT_SUGGESTION);
     }
-    // --- END: This is the new change ---
 
+    // --- Fallback logic if no plantation size is set ---
     let suggestedAmount = DEFAULT_SUGGESTION;
+    const MIN_SESSIONS_FOR_SUGGESTION = 3;
 
-    // --- START: This logic is now a fallback ---
     if (sessionHistory && sessionHistory.length >= MIN_SESSIONS_FOR_SUGGESTION) {
-        // Get the last N sessions to analyze recent trends.
         const recentSessions = sessionHistory.slice(-LOOKBACK_SESSIONS);
-        
-        // Calculate the total number of trees tapped in these recent sessions.
         const totalTreesInRecentSessions = recentSessions.reduce((sum, session) => {
             return sum + (Number(session.tappedTrees) || 0);
         }, 0);
 
-        // Calculate the average.
         const averageTrees = totalTreesInRecentSessions / recentSessions.length;
 
-        // Round the average to the nearest 10 for a cleaner suggestion (e.g., 123 -> 120, 148 -> 150)
         if (!isNaN(averageTrees) && averageTrees > 0) {
             suggestedAmount = Math.round(averageTrees / 10) * 10;
         }
     }
-    // --- END: This logic is now a fallback ---
-
-
+    
     // Final check to ensure the suggestion is not below our defined minimum.
-    if (suggestedAmount < MINIMUM_SUGGESTION) {
-        suggestedAmount = MINIMUM_SUGGESTION;
-    }
-
-    return suggestedAmount;
+    return Math.max(suggestedAmount, MINIMUM_SUGGESTION);
 }
+// --- END: REVISED FUNCTION ---
 
 
 /**

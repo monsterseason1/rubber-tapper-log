@@ -123,19 +123,54 @@
     }
   },
   "treeSpecies": {
-    "normal": { "name": "ต้นยางธรรมดา", "icon": "trees", "rarity": "Common", "maxLevel": 10, "baseGrowthTimeHours": 8, "baseExpPerLevel": 10, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 2, "special_sap": 1 }, "baseAttributes": { "coinYield": 0.05, "xpGain": 0.02 } },
-    "golden": { "name": "ต้นยางทองคำ", "icon": "tree-deciduous", "rarity": "Rare", "maxLevel": 15, "baseGrowthTimeHours": 16, "baseExpPerLevel": 15, "growthRate": 1.2, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 2, "gold_dust": 1 }, "baseAttributes": { "coinYield": 0.15, "xpGain": 0.05 } },
-    "resilient": { "name": "ต้นยางทนทาน", "icon": "shield-check", "rarity": "Rare", "maxLevel": 12, "baseGrowthTimeHours": 14, "baseExpPerLevel": 12, "growthRate": 1.15, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 1, "stone_fragment": 1 }, "baseAttributes": { "xpGain": 0.08 } },
-    "highyield": { "name": "ต้นยางผลผลิตสูง", "icon": "banknote", "rarity": "Epic", "maxLevel": 20, "baseGrowthTimeHours": 24, "baseExpPerLevel": 20, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 4, "special_sap": 3, "gold_dust": 1 }, "baseAttributes": { "coinYield": 0.25, "xpGain": 0.10 } },
-    "fastgrow": { "name": "ต้นยางโตไว", "icon": "timer", "rarity": "Uncommon", "maxLevel": 15, "baseGrowthTimeHours": 6, "baseExpPerLevel": 13, "growthRate": 1.3, "baseMaterialsNeeded": { "fertilizer": 3, "growth_serum": 1 }, "baseAttributes": { "growthRate": 0.10, "xpGain": 0.05 } }
+    "normal": { 
+      "name": "พันธุ์ RRIM 600", "icon": "trees", "rarity": "Common", "maxLevel": 10, 
+      "description": "พันธุ์มาตรฐานที่นิยมปลูกกันอย่างแพร่หลายในประเทศไทย ให้ผลผลิตสม่ำเสมอและปรับตัวได้ดีในหลายสภาพพื้นที่",
+      "baseGrowthTimeHours": 8, "baseExpPerLevel": 10, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 2, "special_sap": 1 }, 
+      "baseAttributes": { "coinYield": 0.05, "xpGain": 0.02 } 
+    },
+    "fastgrow": { 
+      "name": "พันธุ์ GT 1", "icon": "timer", "rarity": "Uncommon", "maxLevel": 15, 
+      "description": "มีจุดเด่นที่การเจริญเติบโตเร็วในช่วงก่อนเปิดกรีด ทำให้สามารถให้ผลผลิตได้เร็วกว่าพันธุ์อื่น เหมาะสำหรับผู้ที่ต้องการขยายสวนอย่างรวดเร็ว",
+      "baseGrowthTimeHours": 6, "baseExpPerLevel": 13, "growthRate": 1.3, "baseMaterialsNeeded": { "fertilizer": 3, "growth_serum": 1 }, 
+      "baseAttributes": { "growthRate": 0.10, "xpGain": 0.05 } 
+    },
+    "golden": { 
+      "name": "พันธุ์ RRIT 251", "icon": "tree-deciduous", "rarity": "Rare", "maxLevel": 15, 
+      "description": "พันธุ์ยอดนิยมที่โดดเด่นเรื่องการให้ผลผลิตน้ำยางสูงมากในช่วงเปิดกรีดใหม่ๆ มีเปลือกหนาและกรีดง่าย",
+      "baseGrowthTimeHours": 16, "baseExpPerLevel": 15, "growthRate": 1.2, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 2, "gold_dust": 1 }, 
+      "baseAttributes": { "coinYield": 0.15, "xpGain": 0.05 } 
+    },
+    "resilient": { 
+      "name": "พันธุ์ PB 235", "icon": "shield-check", "rarity": "Rare", "maxLevel": 12, 
+      "description": "มีความต้านทานโรคใบร่วงและโรคเส้นดำได้ดี มีลำต้นแข็งแรงทนทานต่อลม แต่ต้องระวังเรื่องการกรีดเพราะเปลือกบาง",
+      "baseGrowthTimeHours": 14, "baseExpPerLevel": 12, "growthRate": 1.15, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 1, "stone_fragment": 1 }, 
+      "baseAttributes": { "xpGain": 0.08 } 
+    },
+    "highyield": { 
+      "name": "พันธุ์ BPM 24", "icon": "banknote", "rarity": "Epic", "maxLevel": 20, 
+      "description": "พันธุ์ลูกผสมที่ให้ผลผลิตน้ำยางสูงและมีคุณภาพดีเยี่ยม เป็นที่ต้องการของตลาด แต่ต้องการการดูแลเอาใจใส่เป็นพิเศษ",
+      "baseGrowthTimeHours": 24, "baseExpPerLevel": 20, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 4, "special_sap": 3, "gold_dust": 1 }, 
+      "baseAttributes": { "coinYield": 0.25, "xpGain": 0.10 } 
+    }
   },
   "treeMaterials": {
-    "fertilizer": { "name": "ปุ๋ยพิเศษ", "icon": "hard-drive" },
-    "special_sap": { "name": "น้ำยางเข้มข้น", "icon": "droplets" },
-    "gold_dust": { "name": "ผงทองคำ", "icon": "gem" },
-    "stone_fragment": { "name": "เศษหินแกร่ง", "icon": "mountain" },
-    "growth_serum": { "name": "เซรุ่มเร่งโต", "icon": "flask-conical" }
+    "fertilizer": { "name": "ปุ๋ยพิเศษ", "icon": "hard-drive", "description": "สารอาหารเข้มข้นที่จำเป็นสำหรับการอัปเกรดต้นยาง และช่วยเร่งการเจริญเติบโตของต้นกล้า" },
+    "special_sap": { "name": "น้ำยางเข้มข้น", "icon": "droplets", "description": "น้ำยางที่ผ่านกระบวนการพิเศษ มีความสำคัญอย่างยิ่งในการรวมต้นยางเพื่อสร้างสายพันธุ์ใหม่" },
+    "gold_dust": { "name": "ผงทองคำ", "icon": "gem", "description": "วัตถุดิบหายากที่เปล่งประกาย ใช้ในการอัปเกรดและผสมพันธุ์ต้นยางระดับสูง" },
+    "stone_fragment": { "name": "เศษหินแกร่ง", "icon": "mountain", "description": "ชิ้นส่วนของหินที่แข็งแกร่งเป็นพิเศษ ช่วยเพิ่มความทนทานให้กับต้นยางบางสายพันธุ์" },
+    "growth_serum": { "name": "เซรุ่มเร่งโต", "icon": "flask-conical", "description": "สารเคมีชีวภาพที่ช่วยเร่งการเจริญเติบโตของต้นยางได้อย่างน่าทึ่ง" },
+    "growth_accelerant": { "name": "น้ำยาเร่งโต", "icon": "fast-forward", "description": "สารกระตุ้นชีวภาพที่ใช้กับต้นกล้าเพื่อลดระยะเวลาในการเจริญเติบโตลงอย่างมาก" }
   },
+  "perTapLootTable": [
+    { "type": "coins", "minAmount": 1, "maxAmount": 3, "weight": 60 },
+    { "type": "material", "id": "fertilizer", "amount": 1, "weight": 25 },
+    { "type": "material", "id": "special_sap", "amount": 1, "weight": 10 },
+    { "type": "material", "id": "growth_accelerant", "amount": 1, "weight": 10 },
+    { "type": "material", "id": "gold_dust", "amount": 1, "weight": 2 },
+    { "type": "material", "id": "stone_fragment", "amount": 1, "weight": 3 },
+    { "type": "seed", "rarity": "Common", "amount": 1, "weight": 5 }
+  ],
   "fusionRules": {
     "materialCostMultiplier": 1.2, 
     "attributeInheritanceChance": 0.7 

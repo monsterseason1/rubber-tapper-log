@@ -20,16 +20,18 @@ export let sessionState = {};
 export function saveStateItem(key, value) {
     try {
         localStorage.setItem(key, value);
-        if (Object.prototype.hasOwnProperty.call(state, key)) {
-            state[key] = value;
-        }
+        // We ensure the live state is also updated. This is safe for primitive types.
+        state[key] = value;
     } catch (e) {
         console.error(`Error saving state item for key "${key}":`, e);
     }
 }
 
 /**
+ * --- START: REVISED FUNCTION ---
  * Saves an object or array to localStorage by converting it to a JSON string.
+ * IMPORTANT: This function ONLY saves to localStorage. It no longer modifies the live 'state' object.
+ * The calling function is responsible for mutating the state object directly.
  * @param {string} key The key for the localStorage item.
  * @param {object | Array<any>} value The object or array to save.
  */
@@ -37,13 +39,14 @@ export function saveStateObject(key, value) {
     try {
         const stringValue = JSON.stringify(value);
         localStorage.setItem(key, stringValue);
-        if (Object.prototype.hasOwnProperty.call(state, key)) {
-            state[key] = value;
-        }
+        // The line `state[key] = value;` has been REMOVED.
+        // This prevents the state object's reference from being replaced,
+        // which was the root cause of the stale state bug.
     } catch (e) {
         console.error(`Error saving state object for key "${key}":`, e);
     }
 }
+// --- END: REVISED FUNCTION ---
 
 
 /**
@@ -64,22 +67,18 @@ export function loadState() {
         playerTrees = [];
     }
     
-    // --- START: New logic to ensure data consistency for 'isNew' property ---
     if (Array.isArray(playerTrees)) {
         let needsSave = false;
         playerTrees.forEach(tree => {
-            // If isNew property is missing, this is old data. Add it as false.
             if (tree.isNew === undefined) {
                 tree.isNew = false;
                 needsSave = true;
             }
         });
-        // If we modified any tree, save the updated array back to localStorage.
         if (needsSave) {
             saveStateObject('playerTrees', playerTrees);
         }
     }
-    // --- END: New logic ---
 
     const sessionHistory = JSON.parse(localStorage.getItem('sessionHistory')) || [];
     const bestAvgTime = parseFloat(localStorage.getItem('bestAvgTime')) || null;
@@ -131,11 +130,8 @@ export function loadState() {
         salesHistory: salesHistory,
 
         plantationSize: parseInt(localStorage.getItem('plantationSize'), 10) || null,
-        // --- START: New state for continuous tapping cycle ---
         tappedTreesInCurrentCycle: parseInt(localStorage.getItem('tappedTreesInCurrentCycle'), 10) || 0,
-        // --- END: New state for continuous tapping cycle ---
 
-        // --- New Plantation Map State ---
         isMappingModeActive: localStorage.getItem('isMappingModeActive') === 'true',
         realPlantationLayout: realPlantationLayout,
 
@@ -254,11 +250,9 @@ export function resetSessionState() {
         tapTimestamps: [],
         lapTimes: [],
         sessionLoot: {},
-        // --- New/Revised properties for real-time stats ---
         currentAvgTime: 0,
         lastLapTime: 0,
         previousLapTime: 0,
-        // --- New Session State for Mapping ---
         mapLayout: [],
         currentMapPosition: null
     };

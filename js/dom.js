@@ -33,6 +33,9 @@ export const breedingScreen = document.getElementById('breeding-screen');
 export const marketplaceScreen = document.getElementById('marketplace-screen');
 export const activeTappingScreen = document.getElementById('active-tapping-screen');
 export const plantationMapScreen = document.getElementById('plantation-map-screen');
+// --- START: New Screen ---
+export const debugScreen = document.getElementById('debug-screen');
+// --- END: New Screen ---
 
 
 // --- Header ---
@@ -119,6 +122,17 @@ export const pacingAnalysisText = document.getElementById('pacing-analysis-text'
 export const pacingFirstHalf = document.getElementById('pacing-first-half');
 export const pacingSecondHalf = document.getElementById('pacing-second-half');
 export const coinAnimationContainer = document.getElementById('coin-animation-container');
+export const shareSessionBtn = document.getElementById('share-session-btn');
+
+
+// --- Shareable Card Elements (REMOVED) ---
+// The following elements are removed from here and will be queried
+// on-demand in the `handleShareSession` function to prevent timing issues.
+// export const shareSummaryCard = document.getElementById('share-summary-card');
+// export const shareCardTrees = document.getElementById('share-card-trees');
+// export const shareCardTotalTime = document.getElementById('share-card-total-time');
+// export const shareCardAvgTime = document.getElementById('share-card-avg-time');
+// export const shareCardRecordBadge = document.getElementById('share-card-record-badge');
 
 
 // --- Achievements Screen ---
@@ -154,6 +168,9 @@ export const importFileInput = document.getElementById('import-file-input');
 export const backToMainFromSettingsBtn = document.getElementById('back-to-main-from-settings-btn');
 export const resetDataBtn = document.getElementById('reset-data-btn');
 export const animationEffectsToggle = document.getElementById('animation-effects-toggle');
+// --- START: New Button ---
+export const devDebugBtn = document.getElementById('dev-debug-btn');
+// --- END: New Button ---
 
 
 // --- Missions Screen ---
@@ -204,14 +221,15 @@ export const seedlingCareSection = document.getElementById('seedling-care-sectio
 export const growthCountdown = document.getElementById('growth-countdown');
 export const waterTreeBtn = document.getElementById('water-tree-btn');
 export const fertilizeTreeBtn = document.getElementById('fertilize-tree-btn');
-// --- START: This is the corrected change ---
-export const treeGrownInfo = document.getElementById('tree-grown-info'); // Container for grown tree details
-export const treePlantAction = document.getElementById('tree-plant-action'); // Container for seed/seedling actions
-export const seedPlantSection = document.getElementById('seed-plant-section'); // Section for the 'Plant' button
-export const careActions = document.getElementById('care-actions'); // Container for Water/Fertilize buttons
-export const growTreeBtn = document.getElementById('grow-tree-btn'); // The 'Grow up' button
+export const useGrowthAccelerantBtn = document.getElementById('use-growth-accelerant-btn'); // <-- NEW
+export const treeGrownInfo = document.getElementById('tree-grown-info');
+export const treePlantAction = document.getElementById('tree-plant-action');
+export const seedPlantSection = document.getElementById('seed-plant-section');
+export const careActions = document.getElementById('care-actions');
+export const growTreeBtn = document.getElementById('grow-tree-btn');
 export const sellTreeBtn = document.getElementById('sell-tree-btn');
-// --- END: This is the corrected change ---
+export const plantationFilterTabs = document.getElementById('plantation-filter-tabs'); // <-- NEW
+export const playerInventoryListPlantation = document.getElementById('player-inventory-list-plantation'); // <-- NEW
 
 
 // --- Breeding Screen elements ---
@@ -221,6 +239,7 @@ export const breedingResultPanel = document.getElementById('breeding-result-pane
 export const bredTreeSpecies = document.getElementById('bred-tree-species');
 export const bredTreeAttributes = document.getElementById('bred-tree-attributes');
 export const materialForBreedingList = document.getElementById('material-for-breeding-list');
+export const playerInventoryListBreeding = document.getElementById('player-inventory-list-breeding'); // <-- RENAMED
 export const backToMainFromPlantationBtn = document.getElementById('back-to-main-from-plantation-btn');
 export const backToMainFromBreedingBtn = document.getElementById('back-to-main-from-breeding-btn');
 
@@ -275,3 +294,26 @@ export const mapNoteTextarea = document.getElementById('map-note-textarea');
 export const saveMapNoteBtn = document.getElementById('save-map-note-btn');
 export const deleteMapNoteBtn = document.getElementById('delete-map-note-btn');
 export const mapNoteTreeIdSpan = document.getElementById('map-note-tree-id-span');
+
+// --- Item Detail Modal Elements ---
+export const itemDetailModal = document.getElementById('item-detail-modal');
+export const closeItemDetailModalBtn = document.getElementById('close-item-detail-modal-btn');
+export const okItemDetailModalBtn = document.getElementById('ok-item-detail-modal-btn');
+export const itemDetailName = document.getElementById('item-detail-name');
+export const itemDetailIcon = document.getElementById('item-detail-icon');
+export const itemDetailDescription = document.getElementById('item-detail-description');
+export const itemDetailQuantitySpan = document.getElementById('item-detail-quantity-span');
+
+// --- START: Debug Screen Elements ---
+export const backToSettingsFromDebugBtn = document.getElementById('back-to-settings-from-debug-btn');
+export const debugTabs = document.getElementById('debug-tabs');
+export const debugTabPanels = document.querySelectorAll('.debug-tab-panel');
+export const debugCoinsInput = document.getElementById('debug-coins-input');
+export const debugXpInput = document.getElementById('debug-xp-input');
+export const debugMaterialsList = document.getElementById('debug-materials-list');
+export const debugAddTreeSpeciesSelect = document.getElementById('debug-add-tree-species');
+export const debugAddTreeRaritySelect = document.getElementById('debug-add-tree-rarity');
+export const debugAddTreeBtn = document.getElementById('debug-add-tree-btn');
+export const debugTreeCountSpan = document.getElementById('debug-tree-count');
+export const debugTreesList = document.getElementById('debug-trees-list');
+// --- END: Debug Screen Elements ---

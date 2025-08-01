@@ -1,4 +1,4 @@
-// --- START OF FILE js/ui.js ---
+// --- START OF FILE ui.js ---
 
 /*
 ======================================
@@ -8,7 +8,7 @@
 */
 
 import * as dom from './dom.js';
-import { state, sessionState, saveStateObject } from './state.js';
+import { state, sessionState, saveStateObject, saveStateItem } from './state.js';
 import { calculateStreak, getAICoachTip, getXpForNextLevel, calculateSalesAnalytics, calculateLastSaleAnalysis } from './analysis.js'; 
 import { gameData } from './gameDataService.js';
 import { renderPlantation } from './plantation.js';
@@ -338,6 +338,9 @@ export function applyPurchasedTheme(themeId) {
     }
 
     const isDark = theme.isDark || false; 
+    
+    saveStateItem('isDarkModeActive', isDark);
+
     dom.body.classList.toggle('dark-mode', isDark);
 
     const rootStyle = document.documentElement.style;
@@ -354,9 +357,16 @@ export function applyPurchasedTheme(themeId) {
     }
     
     saveStateObject('activeTheme', themeId); 
+    
+    // --- START: MODIFIED CODE ---
+    // Delay chart re-rendering slightly to ensure new CSS variables are applied by the browser.
+    // This fixes the issue where chart text was invisible in dark mode after a theme switch.
     if (dom.dashboardScreen && dom.dashboardScreen.classList.contains('active')) {
-        renderDashboardCharts();
+        setTimeout(() => {
+            renderDashboardCharts();
+        }, 100); // 100ms delay is imperceptible but effective.
     }
+    // --- END: MODIFIED CODE ---
 }
 
 /**
@@ -440,23 +450,63 @@ export function updateAnimationToggle() {
     }
 }
 
+/**
+ * Renders the player's current inventory of materials into a specified container.
+ * This function is now centralized and more robust.
+ * @param {HTMLElement} container The DOM element to render the inventory into.
+ */
+export function renderPlayerInventory(container) {
+    if (!container) return; // Exit if no container is provided
+
+    const playerMats = state.materials || {};
+    const ownedMatKeys = Object.keys(playerMats).filter(key => playerMats[key] > 0);
+
+    let htmlContent = '<h5>วัตถุดิบในคลังของคุณ:</h5>';
+
+    if (ownedMatKeys.length === 0) {
+        htmlContent += '<p class="info-text">คุณยังไม่มีวัตถุดิบสะสมเลย</p>';
+        container.innerHTML = htmlContent;
+    } else {
+        htmlContent += '<div class="inventory-grid"></div>';
+        container.innerHTML = htmlContent;
+        const grid = container.querySelector('.inventory-grid');
+
+        ownedMatKeys.forEach(matKey => {
+            const matData = gameData.treeMaterials[matKey];
+            const quantity = playerMats[matKey];
+            if (matData) {
+                 const itemEl = document.createElement('div');
+                 itemEl.className = 'inventory-item';
+                 itemEl.dataset.materialKey = matKey; // Add data attribute for click handling
+                 itemEl.title = matData.name; // Tooltip on hover
+                 itemEl.innerHTML = `
+                    <i data-lucide="${matData.icon || 'package'}"></i>
+                    <span class="quantity">${quantity}</span>
+                 `;
+                 itemEl.addEventListener('click', () => showItemDetailModal(matKey));
+                 grid.appendChild(itemEl);
+            }
+        });
+        lucide.createIcons({ nodes: grid.querySelectorAll('i') });
+    }
+}
+
 
 // --- Core UI Functions ---
 
 /**
  * Hides all screens and shows the specified screen.
  * @param {HTMLElement} screenToShow The DOM element of the screen to display.
- * @param {boolean} [isInitialLoad=false] Flag for the very first screen load.
  * @param {boolean} [isTapping=false] Flag to indicate if we are in the active tapping state.
  */
-export function showScreen(screenToShow, isInitialLoad = false, isTapping = false) {
+export function showScreen(screenToShow, isTapping = false) {
     const mainHeader = document.querySelector('.main-header');
     dom.allScreens.forEach(screen => screen.classList.remove('active'));
     screenToShow.classList.add('active');
     
     // Manage header visibility
     if (mainHeader) {
-        if (isInitialLoad || isTapping) {
+        if (isTapping) {
             mainHeader.style.display = 'none';
         } else {
             mainHeader.style.display = 'grid';
@@ -477,7 +527,7 @@ export function showScreen(screenToShow, isInitialLoad = false, isTapping = fals
     if (screenToShow === dom.setupScreen) {
         updateDynamicInfoPanel();
         adjustSetupScreenForUser();
-        updateNotificationIndicators(); // --- START: Call notification update
+        updateNotificationIndicators();
     }
 }
 
@@ -505,7 +555,7 @@ export function adjustSetupScreenForUser() {
 
     // Manage Start Session Button state
     if (state.isMappingModeActive) {
-        const nextTreeNum = (state.realPlantationLayout?.length || 0) + (sessionState.tappedTrees || 0) + 1;
+        const nextTreeNum = (state.realPlantationLayout?.length || 0) + 1;
         dom.startSessionBtn.innerHTML = `<i data-lucide="map-pin"></i> เริ่มสร้างแผนที่ (ต้นที่ ${nextTreeNum})`;
         dom.startSessionBtn.classList.add('mapping-active');
     } else {
@@ -567,29 +617,28 @@ export function showToast({ title, lucideIcon = 'info', customClass = '' }) {
 
 /**
  * Updates the progress bar visually during a session.
- * @param {number} tapped The number of trees tapped.
- * @param {number} total The total number of trees for the session goal.
+ * @param {number} tappedInSession The number of trees tapped in the current sub-session.
+ * @param {number} sessionGoal The total number of trees for the session goal.
  */
-function updateProgressBar(tapped, total) {
-    if (dom.progressBar) {
-        // --- START: Reworked Progress Bar Logic ---
-        // The total for the progress bar is ALWAYS the session goal.
-        const totalForProgressBar = total;
-        const currentTotalTapped = state.tappedTreesInCurrentCycle + tapped;
-
-        const percentage = totalForProgressBar > 0 ? Math.min((currentTotalTapped / totalForProgressBar) * 100, 100) : 0;
-        dom.progressBar.style.width = `${percentage}%`;
-        // --- END: Reworked Progress Bar Logic ---
-    }
+function updateProgressBar(tappedInSession, sessionGoal) {
+    if (!dom.progressBar) return;
+    
+    const cycleGoal = state.plantationSize || sessionGoal;
+    
+    const currentTotalTappedInCycle = (state.tappedTreesInCurrentCycle || 0) + tappedInSession;
+    
+    const percentage = cycleGoal > 0 ? Math.min((currentTotalTappedInCycle / cycleGoal) * 100, 100) : 0;
+    dom.progressBar.style.width = `${percentage}%`;
 }
+
 
 /**
  * Updates all UI elements on the main tapping (prep) screen based on the current session state.
  */
 export function updateTappingScreenUI() {
     const { 
-        tappedTrees, // This is from sessionState, representing trees tapped in THIS sub-session
-        totalTrees, // This is the session goal
+        tappedTrees,
+        totalTrees,
         sessionLoot, 
         currentAvgTime, 
         lastLapTime, 
@@ -598,32 +647,30 @@ export function updateTappingScreenUI() {
 
     const isMapping = state.isMappingModeActive;
 
-    // Toggle visibility of mapping vs regular tapping controls
     dom.startTappingTreeBtn.classList.toggle('hidden', isMapping);
     dom.mappingControls.classList.toggle('hidden', !isMapping);
     dom.mappingUndoBtn.disabled = !isMapping || (sessionState.mapLayout?.length || 0) <= 1;
 
-    const totalTappedInCycle = state.tappedTreesInCurrentCycle + tappedTrees;
-
-    // Update tree counters and progress bar
-    const nextTreeNumber = isMapping ? (sessionState.mapLayout?.length || 0) : totalTappedInCycle + 1;
+    const totalTappedInCycle = (state.tappedTreesInCurrentCycle || 0) + tappedTrees;
+    const nextTreeNumber = isMapping ? (sessionState.mapLayout?.length || 0) + 1 : totalTappedInCycle + 1;
+    
     if (dom.currentTreeNumberSpan) {
         dom.currentTreeNumberSpan.textContent = nextTreeNumber;
     }
-    // --- START: THIS IS THE BUG FIX ---
     if (dom.startTappingTreeBtn) {
         const buttonTextSpan = dom.startTappingTreeBtn.querySelector('span');
         if (buttonTextSpan) {
             buttonTextSpan.textContent = `กรีดต้นที่ ${nextTreeNumber}`;
         }
     }
-    // --- END: THIS IS THE BUG FIX ---
+    
+    const displayGoal = state.plantationSize > 0 ? state.plantationSize : totalTrees;
     if (dom.totalTreesDisplaySpan) {
-        dom.totalTreesDisplaySpan.textContent = totalTrees;
+        dom.totalTreesDisplaySpan.textContent = displayGoal;
     }
+    
     updateProgressBar(tappedTrees, totalTrees);
 
-    // NEW: Update plantation size info display
     if (dom.plantationSizeInfoTapping) {
         if (state.plantationSize > 0) {
             dom.plantationSizeInfoTapping.textContent = `จากสวนทั้งหมด: ${state.plantationSize} ต้น`;
@@ -653,7 +700,7 @@ export function updateTappingScreenUI() {
         }
         lucide.createIcons({ nodes: dom.rtPacingIcon.querySelectorAll('i') });
     } else if (dom.rtPacingIcon) {
-        dom.rtPacingIcon.innerHTML = ''; // Clear icon if not enough data
+        dom.rtPacingIcon.innerHTML = '';
         const parentP = dom.rtLastLapTimeSpan.parentElement;
         parentP.classList.remove('faster', 'slower');
     }
@@ -665,6 +712,7 @@ export function updateTappingScreenUI() {
         }
     });
 }
+
 
 function showInfoBlock(activeBlock) {
     if (!activeBlock) return;
@@ -685,7 +733,6 @@ function showInfoBlock(activeBlock) {
 export function updateDynamicInfoPanel() {
     if (!dom.dynamicInfoPanel) return;
 
-    // Priority 1: Map Prompt
     const shouldShowMapPrompt = state.plantationSize > 0 && (!state.realPlantationLayout || state.realPlantationLayout.length === 0);
     if (shouldShowMapPrompt) {
         const sizeSpan = dom.infoMapPrompt.querySelector('p');
@@ -885,10 +932,7 @@ export function renderDashboardCharts() {
     const primaryColor = computedStyles.getPropertyValue('--primary-color').trim();
     const primaryBgColor = `${primaryColor}33`; 
 
-    Chart.defaults.color = fontColor;
-    Chart.defaults.borderColor = gridColor;
-    Chart.defaults.font.family = "'Kanit', sans-serif";
-    Chart.defaults.font.size = 14;
+    const chartFont = { family: "'Kanit', sans-serif" };
 
     avgTimeChartInstance = new Chart(dom.avgTimeChartCanvas, {
         type: 'line',
@@ -909,8 +953,25 @@ export function renderDashboardCharts() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { y: { reverse: true } },
-            plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw.toFixed(2)} วินาที` } } }
+            scales: { 
+                y: { 
+                    reverse: true,
+                    ticks: { color: fontColor, font: chartFont },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: fontColor, font: chartFont },
+                    grid: { color: gridColor }
+                }
+            },
+            plugins: { 
+                legend: { labels: { color: fontColor, font: chartFont } },
+                tooltip: { 
+                    titleFont: chartFont,
+                    bodyFont: chartFont,
+                    callbacks: { label: (context) => `${context.dataset.label}: ${context.raw.toFixed(2)} วินาที` } 
+                } 
+            }
         }
     });
 
@@ -931,7 +992,24 @@ export function renderDashboardCharts() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw} ต้น` } } }
+            scales: {
+                y: {
+                    ticks: { color: fontColor, font: chartFont },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: fontColor, font: chartFont },
+                    grid: { color: gridColor }
+                }
+            },
+            plugins: { 
+                legend: { labels: { color: fontColor, font: chartFont } },
+                tooltip: { 
+                    titleFont: chartFont,
+                    bodyFont: chartFont,
+                    callbacks: { label: (context) => `${context.dataset.label}: ${context.raw} ต้น` } 
+                } 
+            }
         }
     });
 }
@@ -1153,6 +1231,97 @@ export function renderSalesDashboard() {
     }
 }
 
+// --- NEW: Share Session Logic (REVISED) ---
+/**
+ * Handles the entire process of generating and sharing the session summary image.
+ */
+export async function handleShareSession() {
+    const lastSession = state.sessionHistory.length > 0 ? state.sessionHistory[state.sessionHistory.length - 1] : null;
+    if (!lastSession) {
+        showToast({ title: 'ไม่มีข้อมูลรอบล่าสุดให้แชร์', lucideIcon: 'alert-circle' });
+        return;
+    }
+
+    // --- START: ON-DEMAND ELEMENT QUERY (REVISED WITH ROBUSTNESS) ---
+    const shareCard = document.getElementById('share-summary-card');
+    if (!shareCard) {
+        console.error('Share summary card element (#share-summary-card) not found in the DOM.');
+        showToast({ title: 'เกิดข้อผิดพลาด: ไม่พบส่วนประกอบสำหรับแชร์', lucideIcon: 'alert-triangle' });
+        return;
+    }
+    const shareCardTrees = shareCard.querySelector('#share-card-trees');
+    const shareCardTotalTime = shareCard.querySelector('#share-card-total-time');
+    const shareCardAvgTime = shareCard.querySelector('#share-card-avg-time');
+    const shareCardRecordBadge = shareCard.querySelector('#share-card-record-badge');
+
+    // Robustness check for all child elements
+    if (!shareCardTrees || !shareCardTotalTime || !shareCardAvgTime || !shareCardRecordBadge) {
+        console.error('One or more child elements of the share card are missing. Check IDs: #share-card-trees, #share-card-total-time, #share-card-avg-time, #share-card-record-badge');
+        showToast({ title: 'เกิดข้อผิดพลาด: ส่วนประกอบสำหรับแชร์ไม่สมบูรณ์', lucideIcon: 'alert-triangle' });
+        return;
+    }
+    // --- END: ON-DEMAND ELEMENT QUERY ---
+
+    // 1. Populate the hidden card with data
+    shareCardTrees.textContent = lastSession.tappedTrees.toLocaleString();
+    shareCardTotalTime.textContent = formatTime(lastSession.totalTime);
+    shareCardAvgTime.textContent = lastSession.avgTime.toFixed(2);
+    const isNewRecord = lastSession.avgTime === state.bestAvgTime;
+    shareCardRecordBadge.classList.toggle('hidden', !isNewRecord);
+
+    // 2. Temporarily apply current theme to the card for screenshot
+    const computedStyles = getComputedStyle(document.documentElement);
+    const originalStyle = shareCard.style.cssText;
+    shareCard.style.setProperty('--bg-color', computedStyles.getPropertyValue('--bg-color'));
+    shareCard.style.setProperty('--container-bg', computedStyles.getPropertyValue('--container-bg'));
+    shareCard.style.setProperty('--text-color', computedStyles.getPropertyValue('--text-color'));
+    shareCard.style.setProperty('--subtle-text-color', computedStyles.getPropertyValue('--subtle-text-color'));
+    shareCard.style.setProperty('--border-color', computedStyles.getPropertyValue('--border-color'));
+    shareCard.style.setProperty('--primary-color', computedStyles.getPropertyValue('--primary-color'));
+    shareCard.style.setProperty('--card-shadow', computedStyles.getPropertyValue('--card-shadow'));
+
+    showToast({ title: 'กำลังสร้างรูปภาพ...', lucideIcon: 'image' });
+
+    try {
+        // 3. Use html2canvas to generate the image
+        const canvas = await html2canvas(shareCard, {
+            scale: 2, // Increase resolution for better quality
+            useCORS: true,
+            backgroundColor: null, // Use the card's background
+            willReadFrequently: true // <<< CHANGE 1: Fix for performance warning
+        });
+
+        // 4. Convert canvas to Blob (file data)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const file = new File([blob], 'rubber-tapper-summary.png', { type: 'image/png' });
+        const shareData = {
+            files: [file],
+            title: 'ผลการกรีดยางของฉัน!',
+            text: `ทำลายสถิติใหม่ด้วยความเร็ว ${lastSession.avgTime.toFixed(2)} วิ/ต้น! ลองมาเล่น Rubber Tapper's Log กัน!`,
+        };
+
+        // 5. Use Web Share API if available, otherwise fallback to download
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+        } else {
+            // Fallback for desktop or unsupported browsers
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'rubber-tapper-summary.png';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast({ title: 'รูปภาพถูกดาวน์โหลดแล้ว', lucideIcon: 'download' });
+        }
+    } catch (error) {
+        console.error('Error sharing session:', error);
+        showToast({ title: 'เกิดข้อผิดพลาดในการแชร์', lucideIcon: 'alert-triangle' });
+    } finally {
+        // 6. Clean up: Revert styles
+        shareCard.style.cssText = originalStyle;
+    }
+}
+
+
 // --- NEW: Plantation Map UI Functions ---
 export function showMapScreen() {
     renderPlantationMap();
@@ -1286,5 +1455,55 @@ function handleDeleteMapNote() {
             hideMapNoteModal();
             renderPlantationMap();
         }
+    }
+}
+
+// --- START: This is the new change ---
+/**
+ * Shows the item detail modal with information about a specific material.
+ * @param {string} materialKey The key of the material from gameData.treeMaterials.
+ */
+export function showItemDetailModal(materialKey) {
+    if (!dom.itemDetailModal) return;
+
+    const matData = gameData.treeMaterials[materialKey];
+    if (!matData) return;
+
+    dom.itemDetailName.textContent = matData.name;
+    dom.itemDetailIcon.innerHTML = `<i data-lucide="${matData.icon || 'package'}"></i>`;
+    dom.itemDetailDescription.textContent = matData.description || 'ไม่มีคำอธิบาย';
+    dom.itemDetailQuantitySpan.textContent = (state.materials?.[materialKey] || 0).toLocaleString();
+
+    lucide.createIcons({ nodes: [dom.itemDetailIcon.querySelector('i')] });
+
+    dom.itemDetailModal.classList.remove('hidden');
+}
+
+/**
+ * Hides the item detail modal.
+ */
+export function hideItemDetailModal() {
+    if (dom.itemDetailModal) {
+        dom.itemDetailModal.classList.add('hidden');
+    }
+}
+
+/**
+ * Sets up event listeners for the item detail modal.
+ */
+export function setupItemDetailModalListeners() {
+    if (dom.closeItemDetailModalBtn) {
+        dom.closeItemDetailModalBtn.addEventListener('click', hideItemDetailModal);
+    }
+    if (dom.okItemDetailModalBtn) {
+        dom.okItemDetailModalBtn.addEventListener('click', hideItemDetailModal);
+    }
+    if (dom.itemDetailModal) {
+        dom.itemDetailModal.addEventListener('click', (event) => {
+            // Close if the backdrop is clicked
+            if (event.target === dom.itemDetailModal) {
+                hideItemDetailModal();
+            }
+        });
     }
 }

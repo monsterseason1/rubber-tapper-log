@@ -1,4 +1,4 @@
-// --- START OF FILE main.js ---
+// --- START OF FILE js/main.js ---
 
 /*
 ======================================
@@ -10,7 +10,9 @@
 
 // --- Module Imports ---
 import * as dom from './dom.js';
-import { loadState, saveStateItem, saveStateObject, clearStateItem, state } from './state.js'; 
+// --- START: MODIFIED IMPORT ---
+import { loadState, saveStateItem, saveStateObject, clearStateItem, state, resetSessionState } from './state.js'; 
+// --- END: MODIFIED IMPORT ---
 import { 
     showScreen, 
     toggleTheme, 
@@ -40,7 +42,11 @@ import {
     hideDailyRewardModal,
     updateNotificationIndicators,
     showMapScreen,
-    hideMapNoteModal
+    hideMapNoteModal,
+    showItemDetailModal,
+    hideItemDetailModal,
+    setupItemDetailModalListeners,
+    handleShareSession
 } from './ui.js';
 import { startSession, initiateTreeTap, finalizeTreeTap, endSession, handleMapDirection, handleUndoLastMapping } from './session.js';
 import { generateNewMissions } from './missions.js'; 
@@ -79,7 +85,8 @@ async function initializeApp() {
 
         setupEventListeners();
         setupSaleModalListeners();
-        showScreen(dom.setupScreen, true); // Add flag to hide header on initial load
+        setupItemDetailModalListeners(); // --- START: New Change ---
+        showScreen(dom.setupScreen); // Add flag to hide header on initial load
         lucide.createIcons();
     } catch (error) {
         console.error("Failed to initialize app: Game data could not be loaded.", error);
@@ -199,7 +206,6 @@ function handleClaimReward() {
  * This function determines the goal and initiates the session.
  */
 function handleStartSession() {
-    // --- START: This is the new change ---
     // The logic is now much simpler. We just ask the AI for a suggestion.
     // The AI (in analysis.js) is now smart enough to know whether to return
     // the plantation size or calculate a suggestion.
@@ -216,7 +222,6 @@ function handleStartSession() {
     
     // Pass the determined goal to the session logic.
     startSession(treeCountGoal);
-    // --- END: This is the new change ---
 }
 
 
@@ -234,7 +239,9 @@ function setupEventListeners() {
     dom.endSessionBtnDesktop.addEventListener('click', () => endSession(false));
     dom.endSessionFullBtnDesktop.addEventListener('click', () => endSession(true));
     
+    // --- START: MODIFIED EVENT LISTENER ---
     dom.newSessionBtn.addEventListener('click', () => {
+        resetSessionState(); // <<<< KEY FIX: Reset session state BEFORE loading anything else.
         loadState(); 
         setAIGoal();
         updateGoalDisplay();
@@ -244,6 +251,10 @@ function setupEventListeners() {
         adjustSetupScreenForUser(); // Re-adjust UI for the new session
         showScreen(dom.setupScreen);
     });
+    // --- END: MODIFIED EVENT LISTENER ---
+    // --- START: New Listener for Share Button ---
+    dom.shareSessionBtn.addEventListener('click', handleShareSession);
+    // --- END: New Listener ---
 
     // --- Header and Main Navigation ---
     dom.themeToggleBtn.addEventListener('click', toggleTheme);
@@ -300,6 +311,13 @@ function setupEventListeners() {
         showScreen(dom.marketplaceScreen);
     });
     dom.logSaleBtn.addEventListener('click', showSaleModal);
+    
+    // --- START: New Debug Screen Navigation ---
+    dom.devDebugBtn.addEventListener('click', () => {
+        initializeDebugScreen();
+        showScreen(dom.debugScreen);
+    });
+    // --- END: New Debug Screen Navigation ---
 
     // --- "Back to Main" Buttons ---
     dom.backToMainBtn.addEventListener('click', () => showScreen(dom.setupScreen));
@@ -317,6 +335,9 @@ function setupEventListeners() {
     });
     dom.backToMainFromBreedingBtn.addEventListener('click', () => showScreen(dom.setupScreen));
     dom.backToMainFromMarketplaceBtn.addEventListener('click', () => showScreen(dom.setupScreen));
+    // --- START: New Back Button ---
+    dom.backToSettingsFromDebugBtn.addEventListener('click', () => showScreen(dom.settingsScreen));
+    // --- END: New Back Button ---
     
     // --- Modals ---
     dom.closeLevelUpModalBtn.addEventListener('click', hideLevelUpModal);
@@ -384,6 +405,203 @@ function setupEventListeners() {
     }
     dom.closeMapNoteModalBtn.addEventListener('click', hideMapNoteModal);
 }
+
+// --- START: New Debug Screen Functions ---
+/**
+ * Initializes the debug screen by rendering all data and setting up listeners.
+ */
+function initializeDebugScreen() {
+    renderDebugPlayerStats();
+    renderDebugMaterials();
+    renderDebugTrees();
+    setupDebugListeners();
+    // --- START: New Change ---
+    // Activate the first tab by default
+    switchDebugTab('player'); 
+    // --- END: New Change ---
+}
+
+/**
+ * Renders the player's stats (coins, XP) into the debug inputs.
+ */
+function renderDebugPlayerStats() {
+    dom.debugCoinsInput.value = state.userCoins;
+    dom.debugXpInput.value = state.userXp;
+}
+
+/**
+ * Renders the list of all available materials for debugging.
+ */
+function renderDebugMaterials() {
+    dom.debugMaterialsList.innerHTML = '';
+    Object.entries(gameData.treeMaterials).forEach(([key, material]) => {
+        const currentAmount = state.materials[key] || 0;
+        const controlHtml = `
+            <div class="debug-list-item">
+                <p>${material.name}</p>
+                <div class="debug-control-group" style="grid-template-columns: 1fr auto; margin: 0;">
+                    <input type="number" value="${currentAmount}" data-material-key="${key}" class="debug-material-input">
+                    <button class="btn btn-secondary btn-small debug-set-material-btn" data-material-key="${key}">ตั้งค่า</button>
+                </div>
+            </div>
+        `;
+        dom.debugMaterialsList.insertAdjacentHTML('beforeend', controlHtml);
+    });
+}
+
+/**
+ * Renders the list of player's trees for debugging.
+ */
+function renderDebugTrees() {
+    // Populate dropdown
+    dom.debugAddTreeSpeciesSelect.innerHTML = Object.entries(gameData.treeSpecies)
+        .map(([key, value]) => `<option value="${key}">${value.name}</option>`)
+        .join('');
+
+    // Render list
+    dom.debugTreesList.innerHTML = '';
+    const trees = state.playerTrees || [];
+    dom.debugTreeCountSpan.textContent = trees.length;
+
+    if (trees.length === 0) {
+        dom.debugTreesList.innerHTML = '<p class="info-text">ไม่มีต้นยางในสวน</p>';
+        return;
+    }
+
+    trees.forEach((tree, index) => {
+        const treeData = gameData.treeSpecies[tree.species];
+        const itemHtml = `
+            <div class="debug-list-item">
+                <p>
+                    <strong>${treeData.name}</strong> (${tree.rarity})<br>
+                    <small>Lvl ${tree.level} | ${tree.growthStage}</small>
+                </p>
+                <button class="btn btn-danger btn-small debug-delete-tree-btn" data-tree-index="${index}">ลบ</button>
+            </div>
+        `;
+        dom.debugTreesList.insertAdjacentHTML('beforeend', itemHtml);
+    });
+}
+
+/**
+ * Sets up all event listeners for the debug screen.
+ */
+function setupDebugListeners() {
+    // --- START: New Tab Switching Logic ---
+    if (dom.debugTabs) {
+        dom.debugTabs.addEventListener('click', (event) => {
+            const tabButton = event.target.closest('button');
+            if (tabButton && tabButton.dataset.tab) {
+                switchDebugTab(tabButton.dataset.tab);
+            }
+        });
+    }
+    // --- END: New Tab Switching Logic ---
+
+    // Player Stats (Modified to use a more specific container)
+    const playerTab = document.getElementById('debug-tab-player');
+    if (playerTab) {
+        playerTab.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+
+            const { action, target, amount } = button.dataset;
+            if (!action || !target) return;
+
+            if (target === 'coins') {
+                let currentValue = parseInt(dom.debugCoinsInput.value, 10);
+                if (action === 'set') {
+                    state.userCoins = isNaN(currentValue) ? 0 : currentValue;
+                } else if (action === 'add') {
+                    state.userCoins += parseInt(amount, 10);
+                }
+                saveStateItem('userCoins', state.userCoins);
+                updateUserCoinBalance();
+                renderDebugPlayerStats();
+            } else if (target === 'xp') {
+                let currentValue = parseInt(dom.debugXpInput.value, 10);
+                if (action === 'set') {
+                    state.userXp = isNaN(currentValue) ? 0 : currentValue;
+                } else if (action === 'add') {
+                    state.userXp += parseInt(amount, 10);
+                }
+                saveStateItem('userXp', state.userXp);
+                updateUserProfile();
+                renderDebugPlayerStats();
+            }
+            showToast({ title: `อัปเดต ${target} สำเร็จ`, lucideIcon: 'check' });
+        });
+    }
+
+    // Materials
+    dom.debugMaterialsList.addEventListener('click', (event) => {
+        const button = event.target.closest('.debug-set-material-btn');
+        if (!button) return;
+        const key = button.dataset.materialKey;
+        const input = dom.debugMaterialsList.querySelector(`input[data-material-key="${key}"]`);
+        const newValue = parseInt(input.value, 10);
+        if (!isNaN(newValue)) {
+            state.materials[key] = newValue;
+            saveStateObject('materials', state.materials);
+            showToast({ title: `อัปเดต ${gameData.treeMaterials[key].name} สำเร็จ`, lucideIcon: 'check' });
+        }
+    });
+
+    // Add Tree
+    dom.debugAddTreeBtn.addEventListener('click', () => {
+        const species = dom.debugAddTreeSpeciesSelect.value;
+        const rarity = dom.debugAddTreeRaritySelect.value;
+        const speciesData = gameData.treeSpecies[species];
+        const newSeed = {
+             treeId: `tree_debug_${Date.now()}`,
+             species: species,
+             rarity: rarity,
+             level: 1,
+             exp: 0,
+             growthStage: 'Seed',
+             specialAttributes: speciesData.baseAttributes || {},
+             isNew: true,
+        };
+        state.playerTrees.push(newSeed);
+        saveStateObject('playerTrees', state.playerTrees);
+        showToast({ title: 'เพิ่มเมล็ดพันธุ์สำเร็จ', lucideIcon: 'plus-circle' });
+        renderDebugTrees();
+        updateNotificationIndicators();
+    });
+
+    // Delete Tree
+    dom.debugTreesList.addEventListener('click', (event) => {
+        const button = event.target.closest('.debug-delete-tree-btn');
+        if (!button) return;
+        const index = parseInt(button.dataset.treeIndex, 10);
+        if (confirm(`คุณแน่ใจหรือไม่ว่าจะลบต้นไม้ต้นนี้?`)) {
+            state.playerTrees.splice(index, 1);
+            saveStateObject('playerTrees', state.playerTrees);
+            showToast({ title: 'ลบต้นไม้สำเร็จ', lucideIcon: 'trash-2' });
+            renderDebugTrees();
+        }
+    });
+}
+
+/**
+ * --- START: New Function ---
+ * Handles switching between tabs on the debug screen.
+ * @param {string} tabName The name of the tab to switch to ('player', 'materials', 'trees').
+ */
+function switchDebugTab(tabName) {
+    // Switch active state on buttons
+    dom.debugTabs.querySelectorAll('button').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    // Switch active state on content panels
+    dom.debugTabPanels.forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.tabContent === tabName);
+    });
+}
+// --- END: New Function ---
+
+// --- END: New Debug Screen Functions ---
+
 
 function handlePlantationMapButtonClick() {
     // If a map exists, show it

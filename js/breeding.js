@@ -10,7 +10,7 @@
 import { state, saveStateObject } from './state.js';
 import { gameData } from './gameDataService.js';
 import * as dom from './dom.js';
-import { showScreen, showToast } from './ui.js';
+import { showScreen, showToast, showItemDetailModal, renderPlayerInventory } from './ui.js';
 import { getMaterialsNeededForUpgrade, renderPlantation } from './plantation.js';
 import { applyUpgradeEffect } from './upgrades.js';
 import { grantXp } from './analysis.js';
@@ -29,6 +29,10 @@ export function initializeBreedingScreen() {
     resetBreedingState();
     // No need to render available trees here, as selection is handled via modal/placeholder
     renderBreedingRequirements();
+    // --- START: MODIFIED CALL ---
+    // We now explicitly pass the correct container for the breeding screen.
+    renderPlayerInventory(dom.playerInventoryListBreeding);
+    // --- END: MODIFIED CALL ---
     setupBreedingListeners();
 }
 
@@ -257,6 +261,9 @@ function handleBreedTree() {
     setTimeout(() => {
         resetBreedingState(true);
         renderBreedingRequirements();
+        // --- START: MODIFIED CALL ---
+        renderPlayerInventory(dom.playerInventoryListBreeding); // <-- Refresh inventory after use
+        // --- END: MODIFIED CALL ---
         updateBreedButtonState(); // Ensure button state is correct after reset
     }, 500);
 }
@@ -390,6 +397,9 @@ function setupBreedingListeners() {
 function handleReceiveSeedling() {
     resetBreedingState(false);
     renderBreedingRequirements();
+    // --- START: MODIFIED CALL ---
+    renderPlayerInventory(dom.playerInventoryListBreeding); // <-- Refresh inventory after closing the result panel
+    // --- END: MODIFIED CALL ---
     updateBreedButtonState();
     if (dom.plantationScreen.classList.contains('active')) {
         renderPlantation();

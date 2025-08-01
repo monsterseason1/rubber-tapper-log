@@ -1,4 +1,4 @@
-// --- START OF FILE js/session.js ---
+// --- START OF FILE session.js ---
 
 /*
 ======================================
@@ -19,7 +19,7 @@ import {
     renderSessionLoot,
     updateTappingScreenUI
 } from './ui.js'; 
-import { getAIInsight, getPacingAnalysis, checkAchievementCoinRewards, grantCoins, setAIGoal, grantXp } from './analysis.js';
+import { getAIInsight, getPacingAnalysis, checkAchievementCoinRewards, grantCoins, setAIGoal, grantXp, getActiveTree } from './analysis.js';
 import { checkMissionCompletion } from './missions.js'; 
 import { gameData } from './gameDataService.js';
 import { applyUpgradeEffect } from './upgrades.js';
@@ -285,59 +285,103 @@ export function handleUndoLastMapping() {
 
 
 /**
- * Checks for material/seed drops and updates the session loot state.
+ * Handles guaranteed loot drop for every tap using a weighted table from game_data.
  */
 function handleMaterialDrop() {
-    const baseMaterialDropChance = 0.05;
-    const finalMaterialDropChance = applyUpgradeEffect('material_drop_chance', baseMaterialDropChance);
+    const lootTable = gameData.perTapLootTable;
+    if (!lootTable || lootTable.length === 0) return;
 
-    if (Math.random() < finalMaterialDropChance) {
-        const availableMaterials = Object.keys(gameData.treeMaterials);
-        if (availableMaterials.length > 0) {
-            const randomMaterialKey = availableMaterials[Math.floor(Math.random() * availableMaterials.length)];
-            const materialData = gameData.treeMaterials[randomMaterialKey];
-            
-            if (!state.materials) state.materials = {};
-            state.materials[randomMaterialKey] = (state.materials[randomMaterialKey] || 0) + 1;
-            saveStateObject('materials', state.materials);
-            
-            sessionState.sessionLoot[randomMaterialKey] = (sessionState.sessionLoot[randomMaterialKey] || 0) + 1;
-            
-            showToast({ title: `พบวัตถุดิบ!<br>ได้รับ: 1x ${materialData.name}`, lucideIcon: materialData.icon || 'gem' });
-        }
+    // Apply material drop rate upgrade effect from permanent upgrades
+    let materialBoostFactor = 1 + applyUpgradeEffect('material_drop_chance', 0);
+
+    // --- START: New change to apply active tree bonus ---
+    // Apply bonus from the active tree, if any
+    const activeTree = getActiveTree();
+    if (activeTree && activeTree.specialAttributes?.materialDropRate) {
+        materialBoostFactor *= (1 + activeTree.specialAttributes.materialDropRate);
     }
-    
-    const baseSeedDropChance = 0.01;
-    const finalSeedDropChance = baseSeedDropChance;
+    // --- END: New change ---
 
-    if (Math.random() < finalSeedDropChance) {
-        const availableSpecies = Object.keys(gameData.treeSpecies);
-        if (availableSpecies.length > 0) {
-            const randomSpeciesKey = availableSpecies[Math.floor(Math.random() * availableSpecies.length)];
-            const speciesData = gameData.treeSpecies[randomSpeciesKey];
-            
-            const newTree = {
-                treeId: `tree_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-                species: randomSpeciesKey,
-                rarity: speciesData.rarity || 'Common',
-                level: 1,
-                exp: 0,
-                growthStage: 'Seed', 
-                specialAttributes: speciesData.baseAttributes || {},
-                isNew: true, // --- START: This is the new change ---
-            };
-            
-            if (!state.playerTrees) state.playerTrees = [];
-            state.playerTrees.push(newTree);
-            saveStateObject('playerTrees', state.playerTrees);
-            
-            const seedKey = `${randomSpeciesKey}_seed`;
-            sessionState.sessionLoot[seedKey] = (sessionState.sessionLoot[seedKey] || 0) + 1;
-            
-            showToast({ title: `พบเมล็ดพันธุ์หายาก!<br>ได้รับ: 1x ${speciesData.name} (เมล็ด)`, lucideIcon: 'package', customClass: 'mission-complete' });
+    const weightedLootTable = lootTable.map(item => {
+        let weight = item.weight;
+        // Boost weight only for materials and seeds, not coins
+        if (item.type === 'material' || item.type === 'seed') {
+            weight *= materialBoostFactor;
+        }
+        return { ...item, weight };
+    });
+
+    const totalWeight = weightedLootTable.reduce((sum, item) => sum + item.weight, 0);
+    const randomRoll = Math.random() * totalWeight;
+
+    let cumulativeWeight = 0;
+    for (const lootItem of weightedLootTable) {
+        cumulativeWeight += lootItem.weight;
+        if (randomRoll <= cumulativeWeight) {
+            // We have a winner!
+            grantLoot(lootItem);
+            return; // Exit after granting one loot item
         }
     }
 }
+
+/**
+ * Helper function to grant the actual loot to the player.
+ * @param {object} lootItem The winning loot item object from the loot table.
+ */
+function grantLoot(lootItem) {
+    switch (lootItem.type) {
+        case 'coins':
+            const amount = Math.floor(Math.random() * (lootItem.maxAmount - lootItem.minAmount + 1)) + lootItem.minAmount;
+            grantCoins(amount);
+            showToast({ title: `+${amount} เหรียญ!`, lucideIcon: 'coins', customClass: 'coin-toast' });
+            sessionState.sessionLoot['coins'] = (sessionState.sessionLoot['coins'] || 0) + amount;
+            updateUserCoinBalance();
+            break;
+
+        case 'material':
+            if (!state.materials) state.materials = {};
+            state.materials[lootItem.id] = (state.materials[lootItem.id] || 0) + lootItem.amount;
+            saveStateObject('materials', state.materials);
+            
+            sessionState.sessionLoot[lootItem.id] = (sessionState.sessionLoot[lootItem.id] || 0) + lootItem.amount;
+            
+            const materialData = gameData.treeMaterials[lootItem.id];
+            showToast({ title: `พบวัตถุดิบ!<br>ได้รับ: ${lootItem.amount}x ${materialData.name}`, lucideIcon: materialData.icon || 'gem' });
+            break;
+
+        case 'seed':
+            const availableSpecies = Object.keys(gameData.treeSpecies).filter(key => 
+                (gameData.treeSpecies[key].rarity || 'Common').toLowerCase() === lootItem.rarity.toLowerCase()
+            );
+            if (availableSpecies.length > 0) {
+                const randomSpeciesKey = availableSpecies[Math.floor(Math.random() * availableSpecies.length)];
+                const speciesData = gameData.treeSpecies[randomSpeciesKey];
+                
+                const newTree = {
+                    treeId: `tree_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                    species: randomSpeciesKey,
+                    rarity: speciesData.rarity || 'Common',
+                    level: 1,
+                    exp: 0,
+                    growthStage: 'Seed', 
+                    specialAttributes: speciesData.baseAttributes || {},
+                    isNew: true,
+                };
+                
+                if (!state.playerTrees) state.playerTrees = [];
+                state.playerTrees.push(newTree);
+                saveStateObject('playerTrees', state.playerTrees);
+                
+                const seedKey = `${randomSpeciesKey}_seed`;
+                sessionState.sessionLoot[seedKey] = (sessionState.sessionLoot[seedKey] || 0) + 1;
+                
+                showToast({ title: `พบเมล็ดพันธุ์!<br>ได้รับ: 1x ${speciesData.name} (เมล็ด)`, lucideIcon: 'package', customClass: 'mission-complete' });
+            }
+            break;
+    }
+}
+
 
 /**
  * Ends the current tapping session, calculates results, and shows the summary screen.

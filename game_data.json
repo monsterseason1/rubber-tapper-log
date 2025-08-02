@@ -127,31 +127,46 @@
       "name": "พันธุ์ RRIM 600", "icon": "trees", "rarity": "Common", "maxLevel": 10, 
       "description": "พันธุ์มาตรฐานที่นิยมปลูกกันอย่างแพร่หลายในประเทศไทย ให้ผลผลิตสม่ำเสมอและปรับตัวได้ดีในหลายสภาพพื้นที่",
       "baseGrowthTimeHours": 8, "baseExpPerLevel": 10, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 2, "special_sap": 1 }, 
-      "baseAttributes": { "coinYield": 0.05, "xpGain": 0.02 } 
+      "baseAttributes": { 
+          "coinYield": { "base": 0.05, "growth": 0.005 }, 
+          "xpGain": { "base": 0.02, "growth": 0.002 }
+      }
     },
     "fastgrow": { 
       "name": "พันธุ์ GT 1", "icon": "timer", "rarity": "Uncommon", "maxLevel": 15, 
       "description": "มีจุดเด่นที่การเจริญเติบโตเร็วในช่วงก่อนเปิดกรีด ทำให้สามารถให้ผลผลิตได้เร็วกว่าพันธุ์อื่น เหมาะสำหรับผู้ที่ต้องการขยายสวนอย่างรวดเร็ว",
       "baseGrowthTimeHours": 6, "baseExpPerLevel": 13, "growthRate": 1.3, "baseMaterialsNeeded": { "fertilizer": 3, "growth_serum": 1 }, 
-      "baseAttributes": { "growthRate": 0.10, "xpGain": 0.05 } 
+      "baseAttributes": { 
+          "growthRate": { "base": 0.10, "growth": 0.007 }, 
+          "xpGain": { "base": 0.05, "growth": 0.003 }
+      }
     },
     "golden": { 
       "name": "พันธุ์ RRIT 251", "icon": "tree-deciduous", "rarity": "Rare", "maxLevel": 15, 
       "description": "พันธุ์ยอดนิยมที่โดดเด่นเรื่องการให้ผลผลิตน้ำยางสูงมากในช่วงเปิดกรีดใหม่ๆ มีเปลือกหนาและกรีดง่าย",
       "baseGrowthTimeHours": 16, "baseExpPerLevel": 15, "growthRate": 1.2, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 2, "gold_dust": 1 }, 
-      "baseAttributes": { "coinYield": 0.15, "xpGain": 0.05 } 
+      "baseAttributes": { 
+          "coinYield": { "base": 0.15, "growth": 0.008 }, 
+          "xpGain": { "base": 0.05, "growth": 0.004 }
+      }
     },
     "resilient": { 
       "name": "พันธุ์ PB 235", "icon": "shield-check", "rarity": "Rare", "maxLevel": 12, 
       "description": "มีความต้านทานโรคใบร่วงและโรคเส้นดำได้ดี มีลำต้นแข็งแรงทนทานต่อลม แต่ต้องระวังเรื่องการกรีดเพราะเปลือกบาง",
       "baseGrowthTimeHours": 14, "baseExpPerLevel": 12, "growthRate": 1.15, "baseMaterialsNeeded": { "fertilizer": 3, "special_sap": 1, "stone_fragment": 1 }, 
-      "baseAttributes": { "xpGain": 0.08 } 
+      "baseAttributes": {
+          "xpGain": { "base": 0.08, "growth": 0.005 },
+          "materialDropRate": { "base": 0.05, "growth": 0.005 }
+      }
     },
     "highyield": { 
       "name": "พันธุ์ BPM 24", "icon": "banknote", "rarity": "Epic", "maxLevel": 20, 
       "description": "พันธุ์ลูกผสมที่ให้ผลผลิตน้ำยางสูงและมีคุณภาพดีเยี่ยม เป็นที่ต้องการของตลาด แต่ต้องการการดูแลเอาใจใส่เป็นพิเศษ",
       "baseGrowthTimeHours": 24, "baseExpPerLevel": 20, "growthRate": 1.1, "baseMaterialsNeeded": { "fertilizer": 4, "special_sap": 3, "gold_dust": 1 }, 
-      "baseAttributes": { "coinYield": 0.25, "xpGain": 0.10 } 
+      "baseAttributes": { 
+          "coinYield": { "base": 0.25, "growth": 0.012 }, 
+          "xpGain": { "base": 0.10, "growth": 0.006 }
+      }
     }
   },
   "treeMaterials": {
@@ -162,11 +177,34 @@
     "growth_serum": { "name": "เซรุ่มเร่งโต", "icon": "flask-conical", "description": "สารเคมีชีวภาพที่ช่วยเร่งการเจริญเติบโตของต้นยางได้อย่างน่าทึ่ง" },
     "growth_accelerant": { "name": "น้ำยาเร่งโต", "icon": "fast-forward", "description": "สารกระตุ้นชีวภาพที่ใช้กับต้นกล้าเพื่อลดระยะเวลาในการเจริญเติบโตลงอย่างมาก" }
   },
+  "attributeDetails": {
+    "coinYield": {
+      "name": "ผลผลิตน้ำยาง (โบนัสเหรียญ)",
+      "description": "เพิ่มเปอร์เซ็นต์เหรียญที่ได้รับจากกิจกรรมต่างๆ เมื่อต้นไม้ต้นนี้ถูก 'เปิดใช้งาน' อยู่",
+      "icon": "dollar-sign"
+    },
+    "xpGain": {
+      "name": "โบนัสค่าประสบการณ์ (XP)",
+      "description": "เพิ่มเปอร์เซ็นต์ค่าประสบการณ์ (XP) ที่ผู้เล่นได้รับจากการกรีดยางและกิจกรรมอื่นๆ เมื่อต้นไม้ต้นนี้ถูก 'เปิดใช้งาน' อยู่",
+      "icon": "sparkles"
+    },
+    "materialDropRate": {
+      "name": "อัตราการดรอปวัตถุดิบ",
+      "description": "เพิ่มโอกาสในการค้นพบวัตถุดิบต่างๆ (เช่น ปุ๋ย, น้ำยาง) ทุกครั้งที่ทำการกรีดยาง เมื่อต้นไม้ต้นนี้ถูก 'เปิดใช้งาน' อยู่",
+      "icon": "package-search"
+    },
+    "growthRate": {
+      "name": "อัตราการเจริญเติบโต",
+      "description": "ลดระยะเวลาที่ต้องใช้ในการปลูกต้นกล้าของต้นไม้ 'ทุกต้น' ในสวน คุณสมบัตินี้จะทำงานตลอดเวลาเมื่อต้นไม้ต้นนี้ถูก 'เปิดใช้งาน' อยู่",
+      "icon": "timer"
+    }
+  },
   "perTapLootTable": [
     { "type": "coins", "minAmount": 1, "maxAmount": 3, "weight": 60 },
     { "type": "material", "id": "fertilizer", "amount": 1, "weight": 25 },
     { "type": "material", "id": "special_sap", "amount": 1, "weight": 10 },
     { "type": "material", "id": "growth_accelerant", "amount": 1, "weight": 10 },
+    { "type": "material", "id": "growth_serum", "amount": 1, "weight": 8 },
     { "type": "material", "id": "gold_dust", "amount": 1, "weight": 2 },
     { "type": "material", "id": "stone_fragment", "amount": 1, "weight": 3 },
     { "type": "seed", "rarity": "Common", "amount": 1, "weight": 5 }
@@ -183,5 +221,37 @@
     { "day": 5, "type": "material", "item": "special_sap", "amount": 1 },
     { "day": 6, "type": "coins", "amount": 75 },
     { "day": 7, "type": "random_seed", "rarity": "Uncommon", "amount": 1 }
-  ]
+  ],
+  "careActions": {
+    "water": {
+      "id": "water",
+      "name": "รดน้ำ",
+      "icon": "cloud-drizzle",
+      "description": "ลดเวลาโตลง {value} ชั่วโมง",
+      "timeReductionHours": 1,
+      "cooldownHours": 4
+    },
+    "fertilize": {
+      "id": "fertilize",
+      "name": "ให้ปุ๋ย",
+      "icon": "leaf",
+      "description": "ลดเวลาโตลง {value} นาที",
+      "timeReductionMinutes": 30,
+      "cost": {
+        "material": "fertilizer",
+        "amount": 1
+      }
+    },
+    "accelerate": {
+      "id": "accelerate",
+      "name": "ใช้น้ำยาเร่งโต",
+      "icon": "fast-forward",
+      "description": "ลดเวลาโตที่เหลือลง {value}%",
+      "timeReductionPercent": 25,
+      "cost": {
+        "material": "growth_accelerant",
+        "amount": 1
+      }
+    }
+  }
 }

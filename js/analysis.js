@@ -11,6 +11,7 @@ import { state, saveStateItem, saveStateObject } from './state.js';
 import { showToast, showLevelUpModal, updateUserProfile } from './ui.js'; // Import showLevelUpModal and updateUserProfile
 import { gameData } from './gameDataService.js';
 import { applyUpgradeEffect } from './upgrades.js'; // Import for upgrade system
+import { calculateAttributeValue } from './plantation.js'; // Import the new calculator
 
 /**
  * EXPORTED: Helper function to get the currently active tree object from state.
@@ -44,13 +45,21 @@ export function getXpForNextLevel(level) {
 export function grantXp(xpAmount) {
     if (isNaN(xpAmount) || xpAmount <= 0) return; // Ensure XP is a positive number
 
-    // 1. Apply XP boost from permanent upgrades
-    let finalXpAmount = applyUpgradeEffect('xp_boost_percent', xpAmount);
+    let finalXpAmount = xpAmount;
 
-    // 2. (IMPLEMENTED) Apply XP boost from active tree's special attributes if applicable
-    const activeTree = getActiveTree(); // Helper to get the tree used in the session
-    if (activeTree && activeTree.specialAttributes?.xpGain) {
-        finalXpAmount *= (1 + activeTree.specialAttributes.xpGain);
+    // 1. Apply XP boost from permanent upgrades
+    finalXpAmount = applyUpgradeEffect('xp_boost_percent', finalXpAmount);
+
+    // 2. (REVISED) Apply XP boost from active tree's special attributes
+    const activeTree = getActiveTree();
+    if (activeTree) {
+        // --- START: MODIFIED LOGIC ---
+        // We now use the centralized calculator from plantation.js
+        const xpGainBonus = calculateAttributeValue(activeTree, 'xpGain');
+        if (xpGainBonus > 0) {
+            finalXpAmount *= (1 + xpGainBonus);
+        }
+        // --- END: MODIFIED LOGIC ---
     }
 
     const oldLevel = state.userLevel;
@@ -94,10 +103,16 @@ export function grantCoins(coinAmount) {
     
     let finalCoinAmount = coinAmount;
     
-    // (IMPLEMENTED) Apply coin boost from active tree's special attributes if applicable
+    // (REVISED) Apply coin boost from active tree's special attributes
     const activeTree = getActiveTree();
-    if (activeTree && activeTree.specialAttributes?.coinYield) {
-        finalCoinAmount *= (1 + activeTree.specialAttributes.coinYield);
+    if (activeTree) {
+        // --- START: MODIFIED LOGIC ---
+        // We now use the centralized calculator from plantation.js
+        const coinYieldBonus = calculateAttributeValue(activeTree, 'coinYield');
+        if (coinYieldBonus > 0) {
+            finalCoinAmount *= (1 + coinYieldBonus);
+        }
+        // --- END: MODIFIED LOGIC ---
     }
 
     state.userCoins += Math.round(finalCoinAmount);

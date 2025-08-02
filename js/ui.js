@@ -1,4 +1,4 @@
-// --- START OF FILE ui.js ---
+// --- START OF FILE js/ui.js ---
 
 /*
 ======================================
@@ -9,9 +9,9 @@
 
 import * as dom from './dom.js';
 import { state, sessionState, saveStateObject, saveStateItem } from './state.js';
-import { calculateStreak, getAICoachTip, getXpForNextLevel, calculateSalesAnalytics, calculateLastSaleAnalysis } from './analysis.js'; 
+import { calculateStreak, getAICoachTip, getXpForNextLevel, calculateSalesAnalytics, calculateLastSaleAnalysis, getActiveTree } from './analysis.js'; 
 import { gameData } from './gameDataService.js';
-import { renderPlantation } from './plantation.js';
+import { renderPlantation, calculateAttributeValue } from './plantation.js';
 
 let currentMapZoom = 1.0;
 let selectedMapTreeId = null;
@@ -358,15 +358,11 @@ export function applyPurchasedTheme(themeId) {
     
     saveStateObject('activeTheme', themeId); 
     
-    // --- START: MODIFIED CODE ---
-    // Delay chart re-rendering slightly to ensure new CSS variables are applied by the browser.
-    // This fixes the issue where chart text was invisible in dark mode after a theme switch.
     if (dom.dashboardScreen && dom.dashboardScreen.classList.contains('active')) {
         setTimeout(() => {
             renderDashboardCharts();
-        }, 100); // 100ms delay is imperceptible but effective.
+        }, 100);
     }
-    // --- END: MODIFIED CODE ---
 }
 
 /**
@@ -483,7 +479,7 @@ export function renderPlayerInventory(container) {
                     <i data-lucide="${matData.icon || 'package'}"></i>
                     <span class="quantity">${quantity}</span>
                  `;
-                 itemEl.addEventListener('click', () => showItemDetailModal(matKey));
+                 itemEl.addEventListener('click', () => showItemDetailModal(matKey, 'material'));
                  grid.appendChild(itemEl);
             }
         });
@@ -1458,26 +1454,53 @@ function handleDeleteMapNote() {
     }
 }
 
-// --- START: This is the new change ---
+// --- START: MODIFIED FUNCTION ---
 /**
- * Shows the item detail modal with information about a specific material.
- * @param {string} materialKey The key of the material from gameData.treeMaterials.
+ * Shows the item detail modal with information about a specific material or attribute.
+ * @param {string} key The key of the item from gameData.
+ * @param {string} type The type of item ('material' or 'attribute').
+ * @param {object|null} [contextTree=null] The tree object to use for context, especially for attributes.
  */
-export function showItemDetailModal(materialKey) {
+export function showItemDetailModal(key, type = 'material', contextTree = null) {
     if (!dom.itemDetailModal) return;
 
-    const matData = gameData.treeMaterials[materialKey];
-    if (!matData) return;
+    let itemData, quantityText;
 
-    dom.itemDetailName.textContent = matData.name;
-    dom.itemDetailIcon.innerHTML = `<i data-lucide="${matData.icon || 'package'}"></i>`;
-    dom.itemDetailDescription.textContent = matData.description || 'ไม่มีคำอธิบาย';
-    dom.itemDetailQuantitySpan.textContent = (state.materials?.[materialKey] || 0).toLocaleString();
+    if (type === 'material') {
+        itemData = gameData.treeMaterials[key];
+        quantityText = `จำนวนในคลัง: <strong id="item-detail-quantity-span">${(state.materials?.[key] || 0).toLocaleString()}</strong>`;
+    } else if (type === 'attribute') {
+        itemData = gameData.attributeDetails[key];
+        // Use the provided context tree if available, otherwise fall back to the active tree.
+        const treeForCalculation = contextTree || getActiveTree();
+        
+        if (treeForCalculation) {
+             const currentValue = calculateAttributeValue(treeForCalculation, key);
+             const formattedValue = (key.toLowerCase().includes('percent') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('gain') || key.toLowerCase().includes('yield'))
+                ? `+${(currentValue * 100).toFixed(1)}%`
+                : `+${currentValue.toLocaleString()}`;
+            quantityText = `โบนัสจากต้นที่เลือก: <strong id="item-detail-quantity-span">${formattedValue}</strong>`;
+        } else {
+             quantityText = `<em>เลือกต้นไม้เพื่อดูโบนัสปัจจุบัน</em>`;
+        }
+    }
+
+    if (!itemData) return;
+
+    dom.itemDetailName.textContent = itemData.name;
+    dom.itemDetailIcon.innerHTML = `<i data-lucide="${itemData.icon || 'package'}"></i>`;
+    dom.itemDetailDescription.textContent = itemData.description || 'ไม่มีคำอธิบาย';
+    
+    const quantityContainer = dom.itemDetailModal.querySelector('.item-detail-quantity');
+    if (quantityContainer) {
+        quantityContainer.innerHTML = `<p>${quantityText}</p>`;
+    }
 
     lucide.createIcons({ nodes: [dom.itemDetailIcon.querySelector('i')] });
-
     dom.itemDetailModal.classList.remove('hidden');
 }
+// --- END: MODIFIED FUNCTION ---
+
 
 /**
  * Hides the item detail modal.

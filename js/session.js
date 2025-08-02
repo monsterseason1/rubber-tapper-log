@@ -1,4 +1,4 @@
-// --- START OF FILE session.js ---
+// --- START OF FILE js/session.js ---
 
 /*
 ======================================
@@ -17,7 +17,8 @@ import {
     updateUserCoinBalance,
     animateCoins,
     renderSessionLoot,
-    updateTappingScreenUI
+    updateTappingScreenUI,
+    adjustSetupScreenForUser
 } from './ui.js'; 
 import { getAIInsight, getPacingAnalysis, checkAchievementCoinRewards, grantCoins, setAIGoal, grantXp, getActiveTree } from './analysis.js';
 import { checkMissionCompletion } from './missions.js'; 
@@ -176,7 +177,7 @@ export function initiateTreeTap() {
     }
 
     // Show the active tapping screen and hide the header/footer
-    showScreen(dom.activeTappingScreen, false, true); // (screen, isInitial, isTapping)
+    showScreen(dom.activeTappingScreen, true); // (screenToShow, isTapping)
 }
 
 /**
@@ -292,15 +293,22 @@ function handleMaterialDrop() {
     if (!lootTable || lootTable.length === 0) return;
 
     // Apply material drop rate upgrade effect from permanent upgrades
-    let materialBoostFactor = 1 + applyUpgradeEffect('material_drop_chance', 0);
+    let materialBoostFactor = 1.0;
+    materialBoostFactor = applyUpgradeEffect('material_drop_chance', materialBoostFactor);
 
-    // --- START: New change to apply active tree bonus ---
-    // Apply bonus from the active tree, if any
+
+    // --- START: REVISED - Apply active tree bonus, calculated by level ---
     const activeTree = getActiveTree();
-    if (activeTree && activeTree.specialAttributes?.materialDropRate) {
-        materialBoostFactor *= (1 + activeTree.specialAttributes.materialDropRate);
+    if (activeTree) {
+        const treeData = gameData.treeSpecies[activeTree.species];
+        const materialDropAttr = treeData?.baseAttributes?.materialDropRate;
+        if (materialDropAttr) {
+            // Calculate the bonus based on the tree's current level
+            const bonus = (materialDropAttr.base || 0) + ((materialDropAttr.growth || 0) * (activeTree.level - 1));
+            materialBoostFactor *= (1 + bonus);
+        }
     }
-    // --- END: New change ---
+    // --- END: REVISED ---
 
     const weightedLootTable = lootTable.map(item => {
         let weight = item.weight;
@@ -365,7 +373,7 @@ function grantLoot(lootItem) {
                     level: 1,
                     exp: 0,
                     growthStage: 'Seed', 
-                    specialAttributes: speciesData.baseAttributes || {},
+                    specialAttributes: {}, // Attributes are now calculated, not stored
                     isNew: true,
                 };
                 
@@ -388,6 +396,16 @@ function grantLoot(lootItem) {
  */
 export function endSession(isFullPlantation = false) {
     stopTimers();
+
+    // --- START: MODIFIED CODE - Guard Clause for 0-tap sessions ---
+    if (sessionState.tappedTrees <= 0) {
+        showToast({ title: 'ยกเลิกรอบกรีด: ไม่มีข้อมูลที่ถูกบันทึก', lucideIcon: 'info' });
+        resetSessionState(); // Clear the invalid session data
+        adjustSetupScreenForUser(); // Ensure the setup screen UI is correct
+        showScreen(dom.setupScreen); // Go back to the main screen
+        return; // Exit the function immediately
+    }
+    // --- END: MODIFIED CODE ---
 
     if (dom.startTappingTreeBtn) dom.startTappingTreeBtn.disabled = true; 
     if (dom.endSessionBtn) dom.endSessionBtn.disabled = true;

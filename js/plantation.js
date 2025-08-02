@@ -10,7 +10,7 @@
 import { state, saveStateObject, saveStateItem } from './state.js';
 import { gameData } from './gameDataService.js';
 import * as dom from './dom.js';
-import { showScreen, showToast, formatTime, updateNotificationIndicators, renderPlayerInventory } from './ui.js';
+import { showScreen, showToast, formatTime, updateNotificationIndicators, renderPlayerInventory, showItemDetailModal } from './ui.js';
 import { applyUpgradeEffect } from './upgrades.js';
 import { initializeBreedingScreen } from './breeding.js';
 import { openSellTreeModal } from './marketplace.js';
@@ -188,8 +188,6 @@ function handleTreeCardClick(event) {
     const treeIndex = parseInt(card.dataset.treeIndex, 10);
     if (isNaN(treeIndex) || !state.playerTrees || treeIndex < 0 || treeIndex >= state.playerTrees.length) return;
     
-    // --- START: REFACTORED LOGIC ---
-    // Pass only the index to displayTreeInfo
     const tree = state.playerTrees[treeIndex];
     if (tree && tree.isNew) {
         tree.isNew = false;
@@ -199,7 +197,6 @@ function handleTreeCardClick(event) {
         updateNotificationIndicators();
     }
     displayTreeInfo(treeIndex);
-    // --- END: REFACTORED LOGIC ---
 }
 
 function setupTreeInfoPanelListeners() {
@@ -215,9 +212,33 @@ function setupTreeInfoPanelListeners() {
     rebindButton('upgrade-tree-btn', handleUpgradeTree);
     rebindButton('activate-tree-btn', handleActivateTree);
     rebindButton('plant-tree-btn', handlePlantTree);
-    rebindButton('water-tree-btn', handleWaterTree);
-    rebindButton('fertilize-tree-btn', handleFertilizeTree);
-    rebindButton('use-growth-accelerant-btn', handleUseGrowthAccelerant);
+    
+    // --- START: Rebind care action buttons (if they exist) ---
+    const careActionsList = document.getElementById('care-actions-list');
+    if (careActionsList) {
+        // Use event delegation for simplicity
+        const newCareActionsList = careActionsList.cloneNode(true); // Clone to remove old listeners
+        careActionsList.parentNode.replaceChild(newCareActionsList, careActionsList);
+
+        newCareActionsList.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+            const actionId = button.dataset.actionId;
+            switch (actionId) {
+                case 'water':
+                    handleWaterTree();
+                    break;
+                case 'fertilize':
+                    handleFertilizeTree();
+                    break;
+                case 'accelerate':
+                    handleUseGrowthAccelerant();
+                    break;
+            }
+        });
+    }
+    // --- END: Rebind care action buttons ---
+
     rebindButton('grow-tree-btn', handleGrowTree);
     
     const sellBtn = document.getElementById('sell-tree-btn');
@@ -236,13 +257,10 @@ function setupTreeInfoPanelListeners() {
 }
 
 /**
- * --- START: REFACTORED FUNCTION ---
  * Displays the info panel for a tree based on its index in the state.
- * This function now ALWAYS fetches the latest data from the state.
  * @param {number} index The index of the tree in state.playerTrees.
  */
 function displayTreeInfo(index) {
-    // 1. Get the most up-to-date tree data from the state
     const tree = state.playerTrees[index];
     if (!tree) {
         console.error(`Tree at index ${index} not found.`);
@@ -252,12 +270,10 @@ function displayTreeInfo(index) {
     const treeData = gameData.treeSpecies[tree.species];
     if (!treeData) return;
 
-    // 2. Update the global index
     selectedTreeIndex = index;
     
     if (growthTimerInterval) clearInterval(growthTimerInterval);
 
-    // 3. Render the UI using the fresh `tree` object
     const growthStage = tree.growthStage || 'Grown';
     let panelIcon = treeData.icon || 'trees';
     if (growthStage === 'Seed') panelIcon = 'package';
@@ -273,8 +289,10 @@ function displayTreeInfo(index) {
     
     const {
         treeGrownInfo, treePlantAction, seedPlantSection, seedlingCareSection,
-        careActions, growTreeBtn
+        growTreeBtn
     } = dom;
+    
+    const careActionsList = document.getElementById('care-actions-list'); // Get the new list container
 
     if (growthStage === 'Grown') {
         treeGrownInfo.style.display = 'block';
@@ -288,15 +306,34 @@ function displayTreeInfo(index) {
         dom.selectedTreeExpNext.textContent = expForNext.toLocaleString();
     
         dom.treeAttributes.innerHTML = '';
-        if (tree.specialAttributes && Object.keys(tree.specialAttributes).length > 0) {
-            Object.entries(tree.specialAttributes).forEach(([attrKey, attrValue]) => {
+        const currentAttributes = treeData.baseAttributes || {};
+        if (Object.keys(currentAttributes).length > 0) {
+            Object.entries(currentAttributes).forEach(([attrKey, attrData]) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<i data-lucide="${getIconForAttribute(attrKey)}"></i> ${formatAttributeForDisplay(attrKey, attrValue)}`;
+                li.classList.add('clickable-attribute');
+                li.dataset.attrKey = attrKey;
+                
+                const currentValue = calculateAttributeValue(tree, attrKey);
+                const nextValue = calculateAttributeValue({ ...tree, level: tree.level + 1 }, attrKey);
+                
+                let nextLevelHtml = '';
+                if (tree.level < (treeData.maxLevel || 10)) {
+                    nextLevelHtml = `<span class="next-level-bonus">→ ${formatAttributeValue(attrKey, nextValue, true)}</span>`;
+                }
+
+                li.innerHTML = `
+                    <i data-lucide="${getIconForAttribute(attrKey)}"></i> 
+                    <span class="attribute-text">${formatAttributeForDisplay(attrKey)}: 
+                        <span class="attribute-value">${formatAttributeValue(attrKey, currentValue, true)}</span>
+                        ${nextLevelHtml}
+                    </span>`;
                 dom.treeAttributes.appendChild(li);
             });
+            dom.treeAttributes.addEventListener('click', handleAttributeClick);
         } else {
             dom.treeAttributes.innerHTML = `<li><i data-lucide="minimize-2"></i> ไม่มีคุณสมบัติพิเศษ</li>`;
         }
+
 
         const materialsNeeded = getMaterialsNeededForUpgrade(tree);
         let canUpgrade = (tree.level < (treeData.maxLevel || 10));
@@ -356,21 +393,19 @@ function displayTreeInfo(index) {
                 
                 if (timeLeft <= 0) {
                     dom.growthCountdown.textContent = "พร้อมเติบโตเต็มวัย!";
-                    careActions.style.display = 'none';
+                    if (careActionsList) careActionsList.style.display = 'none';
                     growTreeBtn.style.display = 'inline-flex';
                     if (growthTimerInterval) clearInterval(growthTimerInterval);
                     return;
                 }
                 
-                careActions.style.display = 'grid';
+                if (careActionsList) careActionsList.style.display = 'flex';
                 growTreeBtn.style.display = 'none';
                 dom.growthCountdown.textContent = formatTime(timeLeft / 1000);
-
-                const WATER_COOLDOWN_MS = 4 * 60 * 60 * 1000;
-                const timeSinceWatered = Date.now() - (currentTreeState.lastWateredTimestamp || 0);
-                document.getElementById('water-tree-btn').disabled = timeSinceWatered < WATER_COOLDOWN_MS;
-                document.getElementById('fertilize-tree-btn').disabled = (state.materials?.fertilizer || 0) === 0;
-                document.getElementById('use-growth-accelerant-btn').disabled = (state.materials?.growth_accelerant || 0) === 0;
+                
+                // --- START: New logic to render action list ---
+                renderCareActions(currentTreeState);
+                // --- END: New logic ---
             };
             
             updateGrowthDisplay();
@@ -378,18 +413,152 @@ function displayTreeInfo(index) {
         }
     }
 
-    // 4. Finalize UI and rebind listeners
     lucide.createIcons({ nodes: dom.treeInfoPanel.querySelectorAll('i') });
     dom.treeInfoPanel.classList.add('visible');
     if (treeInfoBackdrop) treeInfoBackdrop.classList.add('visible');
     
     setupTreeInfoPanelListeners();
 }
-// --- END: REFACTORED FUNCTION ---
+
+// --- START: New Function to render the care actions list ---
+/**
+ * Renders the list of care actions for a seedling.
+ * @param {object} tree The seedling object.
+ */
+function renderCareActions(tree) {
+    const careActionsList = document.getElementById('care-actions-list');
+    if (!careActionsList) return;
+    careActionsList.innerHTML = '';
+    
+    Object.values(gameData.careActions).forEach(action => {
+        const item = document.createElement('div');
+        item.className = 'care-action-item';
+
+        let description = action.description;
+        let isAvailable = true;
+        let conditionHtml = '';
+
+        // --- Handle Water Action ---
+        if (action.id === 'water') {
+            description = description.replace('{value}', action.timeReductionHours);
+            const cooldownMs = action.cooldownHours * 60 * 60 * 1000;
+            const timeSinceWatered = Date.now() - (tree.lastWateredTimestamp || 0);
+            const timeLeftMs = cooldownMs - timeSinceWatered;
+
+            if (timeLeftMs > 0) {
+                isAvailable = false;
+                conditionHtml = `<p class="action-condition unavailable">ใช้ได้ในอีก ${formatTime(timeLeftMs / 1000)}</p>`;
+            } else {
+                conditionHtml = `<p class="action-condition">พร้อมใช้งาน</p>`;
+            }
+        }
+        
+        // --- Handle Material Cost Actions ---
+        if (action.cost) {
+            const material = action.cost.material;
+            const costAmount = action.cost.amount;
+            const availableAmount = state.materials[material] || 0;
+            const materialData = gameData.treeMaterials[material];
+            
+            if(action.id === 'fertilize') description = description.replace('{value}', action.timeReductionMinutes);
+            if(action.id === 'accelerate') description = description.replace('{value}', action.timeReductionPercent);
+            
+            if (availableAmount < costAmount) {
+                isAvailable = false;
+                conditionHtml = `<p class="action-condition unavailable">ใช้ ${costAmount} ${materialData.name} (มี: ${availableAmount})</p>`;
+            } else {
+                conditionHtml = `<p class="action-condition">ใช้ ${costAmount} ${materialData.name} (มี: ${availableAmount})</p>`;
+            }
+        }
+        
+        item.innerHTML = `
+            <div class="care-action-icon"><i data-lucide="${action.icon}"></i></div>
+            <div class="care-action-details">
+                <p class="action-title">${action.name}</p>
+                <p class="action-effect">${description}</p>
+                ${conditionHtml}
+            </div>
+            <button class="btn btn-secondary btn-small" data-action-id="${action.id}" ${isAvailable ? '' : 'disabled'}>ใช้</button>
+        `;
+        careActionsList.appendChild(item);
+    });
+
+    lucide.createIcons({ nodes: careActionsList.querySelectorAll('i') });
+}
+// --- END: New Function ---
 
 
-function getIconForAttribute(key) { switch(key) { case 'xpGain': return 'sparkles'; case 'coinYield': return 'dollar-sign'; case 'materialDropRate': return 'package-search'; case 'growthRate': return 'timer'; default: return 'help-circle'; } }
-function formatAttributeForDisplay(key, value) { let displayKey = key.replace(/([A-Z])/g, ' $1').trim(); displayKey = displayKey.charAt(0).toUpperCase() + displayKey.slice(1); let displayValue = value; if (typeof value === 'number') { if (key.toLowerCase().includes('percent') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('gain')) { displayValue = `+${(value * 100).toFixed(1)}%`; } else if (key.toLowerCase().includes('yield') || key.toLowerCase().includes('bonus')) { displayValue = `+${value.toLocaleString()}`; } else { displayValue = value.toLocaleString(); } } return `${displayKey}: ${displayValue}`; }
+/**
+ * --- START: REVISED FUNCTION ---
+ * Calculates the value of a specific attribute for a given tree at a given level.
+ * This function is now decoupled from the component's state (selectedTreeIndex).
+ * @param {object} tree - The tree object to calculate for.
+ * @param {string} attrKey - The key of the attribute (e.g., 'coinYield').
+ * @returns {number} The calculated value of the attribute.
+ */
+export function calculateAttributeValue(tree, attrKey) {
+    if (!tree) return 0;
+
+    const treeData = gameData.treeSpecies[tree.species];
+    if (!treeData || !treeData.baseAttributes || !treeData.baseAttributes[attrKey]) {
+        return 0;
+    }
+
+    const attrInfo = treeData.baseAttributes[attrKey];
+    const baseValue = attrInfo.base || 0;
+    const growthValue = attrInfo.growth || 0;
+    const level = tree.level || 1;
+    
+    const calculatedValue = baseValue + (growthValue * (level - 1));
+    return calculatedValue;
+}
+// --- END: REVISED FUNCTION ---
+
+
+function handleAttributeClick(event) {
+    const li = event.target.closest('.clickable-attribute');
+    if (!li || !li.dataset.attrKey) return;
+    
+    const attrKey = li.dataset.attrKey;
+    const tree = state.playerTrees[selectedTreeIndex];
+    if (!tree) return;
+    
+    // --- START: MODIFIED CALL ---
+    // Pass the selected tree as context to get the correct bonus value.
+    showItemDetailModal(attrKey, 'attribute', tree);
+    // --- END: MODIFIED CALL ---
+}
+
+function getIconForAttribute(key) {
+    return gameData.attributeDetails?.[key]?.icon || 'help-circle';
+}
+
+function formatAttributeForDisplay(key, value, isNumberOnly = false) {
+    let displayKey = gameData.attributeDetails?.[key]?.name || key.replace(/([A-Z])/g, ' $1').trim();
+    if (!gameData.attributeDetails?.[key]) {
+        displayKey = displayKey.charAt(0).toUpperCase() + displayKey.slice(1);
+    }
+    
+    if (value === undefined) {
+        return displayKey;
+    }
+
+    let displayValue = formatAttributeValue(key, value, isNumberOnly);
+    return `${displayKey}: ${displayValue}`;
+}
+
+function formatAttributeValue(key, value, showPlus = false) {
+    let sign = showPlus ? '+' : '';
+    if (typeof value !== 'number') return value;
+
+    if (key.toLowerCase().includes('percent') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('gain') || key.toLowerCase().includes('yield')) {
+        return `${sign}${(value * 100).toFixed(1)}%`;
+    } else {
+        return `${sign}${value.toLocaleString()}`;
+    }
+}
+
+
 function getXpForNextLevelForTree(tree) { const treeData = gameData.treeSpecies[tree.species]; if (!treeData) return 0; return Math.round((treeData.baseExpPerLevel || 10) * Math.pow(tree.level || 1, treeData.growthRate || 1.1)); }
 export function getMaterialsNeededForUpgrade(tree) {
     const treeData = gameData.treeSpecies[tree.species];
@@ -496,7 +665,7 @@ function handleUpgradeTree() {
     
     renderPlantation();
     renderPlayerInventory(dom.playerInventoryListPlantation);
-    displayTreeInfo(selectedTreeIndex); // --- CHANGE: Refresh using only the index
+    displayTreeInfo(selectedTreeIndex);
     showToast({ title: `อัปเกรดต้นยาง ${treeData.name} สำเร็จ!`, lucideIcon: 'hammer', customClass: 'mission-complete' });
 }
 
@@ -511,9 +680,17 @@ function handlePlantTree() {
     tree.growthStage = 'Seedling';
     let growthHours = treeData.baseGrowthTimeHours || 8; 
     const activeTree = getActiveTree();
-    if (activeTree && activeTree.specialAttributes?.growthRate) {
-        growthHours *= (1 - activeTree.specialAttributes.growthRate);
+    
+    let growthRateBonus = 0;
+    if (activeTree) {
+        const growthRateAttr = gameData.treeSpecies[activeTree.species]?.baseAttributes?.growthRate;
+        if (growthRateAttr) {
+            growthRateBonus = calculateAttributeValue(activeTree, 'growthRate');
+        }
     }
+
+    growthHours *= (1 - growthRateBonus);
+
     tree.growsAtTimestamp = Date.now() + (growthHours * 60 * 60 * 1000);
     tree.lastWateredTimestamp = 0;
     
@@ -524,9 +701,72 @@ function handlePlantTree() {
     displayTreeInfo(selectedTreeIndex);
 }
 
-function handleWaterTree() { if (selectedTreeIndex === -1) return; const tree = state.playerTrees[selectedTreeIndex]; if(!tree || tree.growthStage !== 'Seedling') return; const TIME_REDUCTION_MS = 1 * 60 * 60 * 1000; tree.growsAtTimestamp -= TIME_REDUCTION_MS; tree.lastWateredTimestamp = Date.now(); saveStateObject('playerTrees', state.playerTrees); showToast({ title: 'รดน้ำสำเร็จ! ลดเวลาโต 1 ชั่วโมง', lucideIcon: 'cloud-drizzle' }); displayTreeInfo(selectedTreeIndex); }
-function handleFertilizeTree() { if (selectedTreeIndex === -1) return; const tree = state.playerTrees[selectedTreeIndex]; if(!tree || tree.growthStage !== 'Seedling') return; if ((state.materials?.fertilizer || 0) < 1) { showToast({ title: 'ปุ๋ยไม่เพียงพอ!', lucideIcon: 'x-circle' }); return; } const TIME_REDUCTION_MS = 30 * 60 * 1000; state.materials.fertilizer -= 1; tree.growsAtTimestamp -= TIME_REDUCTION_MS; saveStateObject('playerTrees', state.playerTrees); saveStateObject('materials', state.materials); showToast({ title: 'ใช้ปุ๋ยสำเร็จ! ลดเวลาโต 30 นาที', lucideIcon: 'leaf' }); displayTreeInfo(selectedTreeIndex); }
-function handleUseGrowthAccelerant() { if (selectedTreeIndex === -1) return; const tree = state.playerTrees[selectedTreeIndex]; if(!tree || tree.growthStage !== 'Seedling') return; if ((state.materials?.growth_accelerant || 0) < 1) { showToast({ title: 'น้ำยาเร่งโตไม่เพียงพอ!', lucideIcon: 'x-circle' }); return; } const timeLeftMs = tree.growsAtTimestamp - Date.now(); if (timeLeftMs <= 0) return; const timeReductionMs = timeLeftMs * 0.25; state.materials.growth_accelerant -= 1; tree.growsAtTimestamp -= timeReductionMs; saveStateObject('playerTrees', state.playerTrees); saveStateObject('materials', state.materials); const hoursReduced = (timeReductionMs / (1000 * 60 * 60)).toFixed(1); showToast({ title: `ใช้น้ำยาเร่งโตสำเร็จ! ลดเวลาโตลง ${hoursReduced} ชั่วโมง`, lucideIcon: 'zap', customClass: 'mission-complete' }); displayTreeInfo(selectedTreeIndex); }
+function handleWaterTree() {
+    if (selectedTreeIndex === -1) return;
+    const tree = state.playerTrees[selectedTreeIndex];
+    if(!tree || tree.growthStage !== 'Seedling') return;
+
+    const actionData = gameData.careActions.water;
+    const timeReductionMs = actionData.timeReductionHours * 60 * 60 * 1000;
+    
+    tree.growsAtTimestamp -= timeReductionMs;
+    tree.lastWateredTimestamp = Date.now();
+    saveStateObject('playerTrees', state.playerTrees);
+    showToast({ title: `รดน้ำสำเร็จ! ลดเวลาโต ${actionData.timeReductionHours} ชั่วโมง`, lucideIcon: 'cloud-drizzle' });
+    displayTreeInfo(selectedTreeIndex);
+}
+
+function handleFertilizeTree() {
+    if (selectedTreeIndex === -1) return;
+    const tree = state.playerTrees[selectedTreeIndex];
+    if(!tree || tree.growthStage !== 'Seedling') return;
+    
+    const actionData = gameData.careActions.fertilize;
+    const cost = actionData.cost;
+
+    if ((state.materials?.[cost.material] || 0) < cost.amount) {
+        showToast({ title: `${gameData.treeMaterials[cost.material].name} ไม่เพียงพอ!`, lucideIcon: 'x-circle' });
+        return;
+    }
+    
+    const timeReductionMs = actionData.timeReductionMinutes * 60 * 1000;
+    
+    state.materials[cost.material] -= cost.amount;
+    tree.growsAtTimestamp -= timeReductionMs;
+    saveStateObject('playerTrees', state.playerTrees);
+    saveStateObject('materials', state.materials);
+    showToast({ title: `ใช้ปุ๋ยสำเร็จ! ลดเวลาโต ${actionData.timeReductionMinutes} นาที`, lucideIcon: 'leaf' });
+    displayTreeInfo(selectedTreeIndex);
+}
+
+function handleUseGrowthAccelerant() {
+    if (selectedTreeIndex === -1) return;
+    const tree = state.playerTrees[selectedTreeIndex];
+    if(!tree || tree.growthStage !== 'Seedling') return;
+    
+    const actionData = gameData.careActions.accelerate;
+    const cost = actionData.cost;
+    
+    if ((state.materials?.[cost.material] || 0) < cost.amount) {
+        showToast({ title: `${gameData.treeMaterials[cost.material].name} ไม่เพียงพอ!`, lucideIcon: 'x-circle' });
+        return;
+    }
+
+    const timeLeftMs = tree.growsAtTimestamp - Date.now();
+    if (timeLeftMs <= 0) return;
+    
+    const timeReductionMs = timeLeftMs * (actionData.timeReductionPercent / 100);
+    
+    state.materials[cost.material] -= cost.amount;
+    tree.growsAtTimestamp -= timeReductionMs;
+    saveStateObject('playerTrees', state.playerTrees);
+    saveStateObject('materials', state.materials);
+    
+    const hoursReduced = (timeReductionMs / (1000 * 60 * 60)).toFixed(1);
+    showToast({ title: `ใช้น้ำยาเร่งโตสำเร็จ! ลดเวลาโตลง ${hoursReduced} ชั่วโมง`, lucideIcon: 'zap', customClass: 'mission-complete' });
+    displayTreeInfo(selectedTreeIndex);
+}
+
 function handleGrowTree() { if (selectedTreeIndex === -1) return; const tree = state.playerTrees[selectedTreeIndex]; if(!tree || tree.growthStage !== 'Seedling') return; const timeLeft = (tree.growsAtTimestamp || 0) - Date.now(); if (timeLeft > 0) { showToast({ title: 'ต้นยังไม่พร้อมเติบโต!', lucideIcon: 'hourglass' }); return; } tree.growthStage = 'Grown'; delete tree.growsAtTimestamp; delete tree.lastWateredTimestamp; saveStateObject('playerTrees', state.playerTrees); showToast({ title: `ต้นกล้า ${gameData.treeSpecies[tree.species].name} โตเต็มวัยแล้ว!`, lucideIcon: 'trees', customClass: 'mission-complete' }); renderPlantation(); displayTreeInfo(selectedTreeIndex); }
 
 export function handleCloseTreeInfo() {
@@ -534,6 +774,11 @@ export function handleCloseTreeInfo() {
     growthTimerInterval = null;
     dom.treeInfoPanel.classList.remove('visible');
     if (treeInfoBackdrop) treeInfoBackdrop.classList.remove('visible');
+    
+    if (dom.treeAttributes) {
+        dom.treeAttributes.removeEventListener('click', handleAttributeClick);
+    }
+    
     setTimeout(() => {
         selectedTreeIndex = -1;
     }, 300);

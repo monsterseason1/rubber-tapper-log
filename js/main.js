@@ -239,21 +239,22 @@ function setupEventListeners() {
     dom.endSessionBtnDesktop.addEventListener('click', () => endSession(false));
     dom.endSessionFullBtnDesktop.addEventListener('click', () => endSession(true));
     
-    // --- START: MODIFIED EVENT LISTENER ---
+    // --- START: MODIFIED EVENT LISTENER (This is now correct because state.js is fixed) ---
     dom.newSessionBtn.addEventListener('click', () => {
-        resetSessionState(); // <<<< KEY FIX: Reset session state BEFORE loading anything else.
-        loadState(); 
-        setAIGoal();
-        updateGoalDisplay();
-        updateUserProfile(); 
-        updateUserCoinBalance();
-        generateNewMissions(); 
-        adjustSetupScreenForUser(); // Re-adjust UI for the new session
-        showScreen(dom.setupScreen);
+        const returnContext = state.currentSummarySession?.returnContext; // Ensure proper reference
+        if (returnContext === 'history') {
+            showScreen(dom.historyScreen);
+        } else {
+            resetSessionState();
+            showScreen(dom.setupScreen);
+        }
     });
-    // --- END: MODIFIED EVENT LISTENER ---
+    // --- END: CORRECTED LOGIC ---
+
     // --- START: New Listener for Share Button ---
-    dom.shareSessionBtn.addEventListener('click', handleShareSession);
+    dom.shareSessionBtn.addEventListener('click', () => {
+        handleShareSession();
+    });
     // --- END: New Listener ---
 
     // --- Header and Main Navigation ---
@@ -414,6 +415,7 @@ function initializeDebugScreen() {
     renderDebugPlayerStats();
     renderDebugMaterials();
     renderDebugTrees();
+    renderDebugLootTable();
     setupDebugListeners();
     // --- START: New Change ---
     // Activate the first tab by default
@@ -481,6 +483,66 @@ function renderDebugTrees() {
         `;
         dom.debugTreesList.insertAdjacentHTML('beforeend', itemHtml);
     });
+}
+
+/**
+ * Renders the loot table for debugging.
+ */
+function renderDebugLootTable() {
+    const lootTable = state.debugLootTableOverride || gameData.perTapLootTable;
+    dom.debugLootTableList.innerHTML = lootTable.map((item, index) => {
+        // Set default names for the first and last items
+        const itemName = 
+            (index === 0) ? 'เหรียญ' :
+            (index === lootTable.length - 1) ? 'เมล็ดพันธุ์' :
+            gameData.items?.[item.id]?.name || 
+            gameData.treeMaterials?.[item.id]?.name || 
+            item.name || 
+            'Unnamed Item';
+
+        return `
+            <div class="debug-loottable-item" data-index="${index}">
+                <p>${itemName}</p>
+                <div class="input-group"><label>Weight</label><input type="number" value="${item.weight}" class="debug-loot-weight"></div>
+                <div class="input-group"><label>Min</label><input type="number" value="${item.minAmount || 1}" class="debug-loot-min"></div>
+                <div class="input-group"><label>Max</label><input type="number" value="${item.maxAmount || item.minAmount || 1}" class="debug-loot-max"></div>
+                <button class="btn btn-secondary btn-small debug-apply-loot-btn">Apply</button>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Handles applying changes to the loot table.
+ */
+function handleApplyLootChange(event) {
+    if (!event.target.classList.contains('debug-apply-loot-btn')) return;
+    const itemElement = event.target.closest('.debug-loottable-item');
+    const index = parseInt(itemElement.dataset.index, 10);
+    const weight = parseFloat(itemElement.querySelector('.debug-loot-weight').value);
+    const minAmount = parseInt(itemElement.querySelector('.debug-loot-min').value, 10);
+    const maxAmount = parseInt(itemElement.querySelector('.debug-loot-max').value, 10);
+
+    const newTable = [...(state.debugLootTableOverride || gameData.perTapLootTable)];
+    newTable[index] = { ...newTable[index], weight, minAmount, maxAmount };
+
+    saveStateObject('debugLootTableOverride', newTable);
+    state.debugLootTableOverride = newTable;
+
+    // Show a toast notification
+    showToast({ 
+        title: 'อัปเดตข้อมูลสำเร็จ', 
+        lucideIcon: 'check-circle', 
+        customClass: 'mission-complete' 
+    });
+}
+
+/**
+ * Handles resetting the loot table to its default state.
+ */
+function handleResetLootTable() {
+    clearStateItem('debugLootTableOverride');
+    renderDebugLootTable();
 }
 
 /**
@@ -581,6 +643,10 @@ function setupDebugListeners() {
             renderDebugTrees();
         }
     });
+
+    // Loot Table
+    dom.debugLootTableList.addEventListener('click', handleApplyLootChange);
+    dom.debugLootTableResetBtn.addEventListener('click', handleResetLootTable);
 }
 
 /**

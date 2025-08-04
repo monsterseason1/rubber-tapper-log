@@ -289,8 +289,13 @@ export function handleUndoLastMapping() {
  * Handles guaranteed loot drop for every tap using a weighted table from game_data.
  */
 function handleMaterialDrop() {
-    const lootTable = gameData.perTapLootTable;
-    if (!lootTable || lootTable.length === 0) return;
+    // --- START: MODIFIED LOGIC ---
+    const sourceLootTable = (state.debugLootTableOverride && state.debugLootTableOverride.length > 0) 
+                             ? state.debugLootTableOverride 
+                             : gameData.perTapLootTable;
+
+    if (!sourceLootTable || sourceLootTable.length === 0) return;
+    // --- END: MODIFIED LOGIC ---
 
     // Apply material drop rate upgrade effect from permanent upgrades
     let materialBoostFactor = 1.0;
@@ -310,7 +315,7 @@ function handleMaterialDrop() {
     }
     // --- END: REVISED ---
 
-    const weightedLootTable = lootTable.map(item => {
+    const weightedLootTable = sourceLootTable.map(item => {
         let weight = item.weight;
         // Boost weight only for materials and seeds, not coins
         if (item.type === 'material' || item.type === 'seed') {
@@ -340,7 +345,9 @@ function handleMaterialDrop() {
 function grantLoot(lootItem) {
     switch (lootItem.type) {
         case 'coins':
-            const amount = Math.floor(Math.random() * (lootItem.maxAmount - lootItem.minAmount + 1)) + lootItem.minAmount;
+            const min = lootItem.minAmount || 1;
+            const max = lootItem.maxAmount || lootItem.minAmount || 1;
+            const amount = Math.floor(Math.random() * (max - min + 1)) + min;
             grantCoins(amount);
             showToast({ title: `+${amount} เหรียญ!`, lucideIcon: 'coins', customClass: 'coin-toast' });
             sessionState.sessionLoot['coins'] = (sessionState.sessionLoot['coins'] || 0) + amount;

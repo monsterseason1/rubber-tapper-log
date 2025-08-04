@@ -23,6 +23,7 @@
  * @property {Object} soundShopItems // We'll add this structure here
  * @property {Object} gameBalance // New: For XP/Coin rates, etc.
  * @property {Array<Object>} missionTemplates // New: For daily mission generation
+ * @property {Object} items // New: For in-game items like seeds and coins
  */
 
 /** @type {GameConfig | null} */
@@ -90,6 +91,20 @@ export async function loadGameData() {
             AI_GOAL_PERCENT_IMPROVEMENT: 0.98, // Target for AI goal (e.g., 0.98 means 98% of best avg)
             AI_GOAL_MIN_TIME: 15, // Minimum possible AI goal time (seconds/tree)
             AI_GOAL_MAX_TIME: 60 // Maximum possible AI goal time (seconds/tree)
+        };
+
+        // Items (New addition to game_data)
+        data.items = {
+            seed: {
+                name: 'เมล็ดพันธุ์',
+                description: 'ใช้สำหรับปลูกต้นไม้ใหม่',
+                icon: 'seedling' // ตัวอย่างไอคอน
+            },
+            coin: {
+                name: 'เหรียญ',
+                description: 'สกุลเงินในเกม',
+                icon: 'coins' // ตัวอย่างไอคอน
+            }
         };
 
         gameData = data; // Assign loaded data to the exported variable

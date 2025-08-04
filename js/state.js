@@ -28,29 +28,28 @@ export function saveStateItem(key, value) {
 }
 
 /**
- * --- START: REVISED FUNCTION ---
- * Saves an object or array to localStorage by converting it to a JSON string.
- * IMPORTANT: This function ONLY saves to localStorage. It no longer modifies the live 'state' object.
- * The calling function is responsible for mutating the state object directly.
+ * --- START: CORRECTED FUNCTION ---
+ * Saves an object or array to localStorage and updates the live state object's property.
+ * This is the correct way to ensure the live state is always the single source of truth.
  * @param {string} key The key for the localStorage item.
  * @param {object | Array<any>} value The object or array to save.
  */
 export function saveStateObject(key, value) {
     try {
-        const stringValue = JSON.stringify(value);
-        localStorage.setItem(key, stringValue);
-        // The line `state[key] = value;` has been REMOVED.
-        // This prevents the state object's reference from being replaced,
-        // which was the root cause of the stale state bug.
+        localStorage.setItem(key, JSON.stringify(value));
+        // This line is CRUCIAL. It updates the property on the globally referenced `state` object.
+        state[key] = value;
     } catch (e) {
         console.error(`Error saving state object for key "${key}":`, e);
     }
 }
-// --- END: REVISED FUNCTION ---
+// --- END: CORRECTED FUNCTION ---
 
 
 /**
- * Loads the initial state from localStorage.
+ * --- START: CRITICAL FIX ---
+ * Loads the initial state from localStorage by MUTATING the existing state object,
+ * not reassigning it. This preserves the reference for all other modules.
  */
 export function loadState() {
     let playerTrees = [];
@@ -76,6 +75,7 @@ export function loadState() {
             }
         });
         if (needsSave) {
+            // Use the corrected save function which also updates the live state
             saveStateObject('playerTrees', playerTrees);
         }
     }
@@ -94,60 +94,45 @@ export function loadState() {
         }
     }
     
-    const materials = JSON.parse(localStorage.getItem('materials')) || {};
-    const activeTreeId = localStorage.getItem('activeTreeId') || null;
-    const marketplace = JSON.parse(localStorage.getItem('marketplace')) || { myListings: [] };
-    const salesHistory = JSON.parse(localStorage.getItem('salesHistory')) || [];
-    const realPlantationLayout = JSON.parse(localStorage.getItem('realPlantationLayout')) || [];
+    // Instead of state = { ... }, we now assign to properties of the existing state object.
+    state.bestAvgTime = bestAvgTime;
+    state.lifetimeTrees = parseInt(localStorage.getItem('lifetimeTrees'), 10) || 0;
+    state.unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || [];
+    state.sessionHistory = sessionHistory;
+    state.goalAvgTime = parseFloat(localStorage.getItem('goalAvgTime')) || null;
+    state.lastSessionDate = localStorage.getItem('lastSessionDate') || null;
+    state.bestSessionLapTimes = bestSessionLapTimes;
+    state.userLevel = parseInt(localStorage.getItem('userLevel'), 10) || 1;
+    state.userXp = parseInt(localStorage.getItem('userXp'), 10) || 0;
+    state.activeMissions = JSON.parse(localStorage.getItem('activeMissions')) || [];
+    state.lastMissionCheckDate = localStorage.getItem('lastMissionCheckDate') || null;
+    state.userCoins = parseInt(localStorage.getItem('userCoins'), 10) || 0;
+    state.unlockedThemes = JSON.parse(localStorage.getItem('unlockedThemes')) || []; 
+    state.activeTheme = localStorage.getItem('activeTheme') || ''; 
+    state.unlockedSoundPacks = JSON.parse(localStorage.getItem('unlockedSoundPacks')) || []; 
+    state.activeSoundPack = localStorage.getItem('activeSoundPack') || '';
+    state.upgrades = JSON.parse(localStorage.getItem('upgrades')) || {};
+    state.playerTrees = playerTrees;
+    state.materials = JSON.parse(localStorage.getItem('materials')) || {};
+    state.activeTreeId = localStorage.getItem('activeTreeId') || null;
+    state.marketplace = JSON.parse(localStorage.getItem('marketplace')) || { myListings: [] };
+    state.salesHistory = JSON.parse(localStorage.getItem('salesHistory')) || [];
+    state.plantationSize = parseInt(localStorage.getItem('plantationSize'), 10) || null;
+    state.tappedTreesInCurrentCycle = parseInt(localStorage.getItem('tappedTreesInCurrentCycle'), 10) || 0;
+    state.isMappingModeActive = localStorage.getItem('isMappingModeActive') === 'true';
+    state.realPlantationLayout = JSON.parse(localStorage.getItem('realPlantationLayout')) || [];
+    state.lastLoginDate = localStorage.getItem('lastLoginDate') || null;
+    state.loginStreakCount = parseInt(localStorage.getItem('loginStreakCount'), 10) || 0;
+    state.animationEffectsEnabled = localStorage.getItem('animationEffectsEnabled') === 'false' ? false : true;
+    state.debugLootTableOverride = JSON.parse(localStorage.getItem('debugLootTableOverride')) || null;
 
-    state = {
-        bestAvgTime: bestAvgTime,
-        lifetimeTrees: parseInt(localStorage.getItem('lifetimeTrees'), 10) || 0,
-        unlockedAchievements: JSON.parse(localStorage.getItem('unlockedAchievements')) || [],
-        sessionHistory: sessionHistory,
-        goalAvgTime: parseFloat(localStorage.getItem('goalAvgTime')) || null,
-        lastSessionDate: localStorage.getItem('lastSessionDate') || null,
-        bestSessionLapTimes: bestSessionLapTimes,
-
-        userLevel: parseInt(localStorage.getItem('userLevel'), 10) || 1,
-        userXp: parseInt(localStorage.getItem('userXp'), 10) || 0,
-        activeMissions: JSON.parse(localStorage.getItem('activeMissions')) || [],
-        lastMissionCheckDate: localStorage.getItem('lastMissionCheckDate') || null,
-        
-        userCoins: parseInt(localStorage.getItem('userCoins'), 10) || 0,
-        unlockedThemes: JSON.parse(localStorage.getItem('unlockedThemes')) || [], 
-        activeTheme: localStorage.getItem('activeTheme') || '', 
-        unlockedSoundPacks: JSON.parse(localStorage.getItem('unlockedSoundPacks')) || [], 
-        activeSoundPack: localStorage.getItem('activeSoundPack') || '',
-
-        upgrades: JSON.parse(localStorage.getItem('upgrades')) || {},
-
-        playerTrees: playerTrees,
-        materials: materials,
-        activeTreeId: activeTreeId,
-        marketplace: marketplace,
-
-        salesHistory: salesHistory,
-
-        plantationSize: parseInt(localStorage.getItem('plantationSize'), 10) || null,
-        tappedTreesInCurrentCycle: parseInt(localStorage.getItem('tappedTreesInCurrentCycle'), 10) || 0,
-
-        isMappingModeActive: localStorage.getItem('isMappingModeActive') === 'true',
-        realPlantationLayout: realPlantationLayout,
-
-        lastLoginDate: localStorage.getItem('lastLoginDate') || null,
-        loginStreakCount: parseInt(localStorage.getItem('loginStreakCount'), 10) || 0,
-
-        animationEffectsEnabled: localStorage.getItem('animationEffectsEnabled') === 'false' ? false : true 
-    };
-
-    // --- Data Migration & Initialization for new properties ---
-
+    // --- Data Migration & Initialization ---
+    // This part remains the same, but now it correctly modifies the shared state object.
     if (!gameData) {
         console.error("Error: gameData is not loaded. Cannot initialize state dependent on gameData.");
         return; 
     }
-
+    // ... (rest of the function is the same as before) ...
     if ((!state.activeMissions || state.activeMissions.length === 0) && state.lastMissionCheckDate === null) {
         state.activeMissions = []; 
         saveStateObject('activeMissions', state.activeMissions);
@@ -231,6 +216,9 @@ export function clearStateItem(key) {
             else if (typeof state[key] === 'number') state[key] = 0;
             else if (typeof state[key] === 'boolean') state[key] = false;
             else state[key] = null; 
+        }
+        if (key === 'debugLootTableOverride') {
+            state.debugLootTableOverride = null;
         }
     } catch (e) {
         console.error(`Error clearing state item for key "${key}":`, e);

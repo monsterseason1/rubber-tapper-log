@@ -1588,54 +1588,14 @@ p.current-goal-value span {
     display: block;
     margin-bottom: 1.5rem;
 }
-
-/* --- START: New Care Actions List Styling --- */
-.care-actions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 0 1.5rem 1rem;
-}
-.care-action-item {
+.care-actions {
     display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    background-color: var(--bg-color);
-    border-radius: 10px;
-    padding: 0.75rem;
+    padding: 1rem 1.5rem 0; /* Add padding for care buttons */
+    max-width: 450px;
+    margin: 0 auto;
 }
-.care-action-icon {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-}
-.care-action-details p {
-    margin: 0;
-    line-height: 1.4;
-}
-.care-action-details .action-title {
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--text-color);
-}
-.care-action-details .action-effect {
-    font-size: 0.9rem;
-    color: var(--success-color);
-    font-weight: 500;
-}
-.care-action-details .action-condition {
-    font-size: 0.8rem;
-    color: var(--subtle-text-color);
-}
-.care-action-details .action-condition.unavailable {
-    color: var(--danger-color);
-    font-weight: 500;
-}
-.care-action-item .btn-small {
-    padding: 0.6rem 1.2rem;
-}
-/* --- END: New Care Actions List Styling --- */
-
 #grow-tree-btn {
     width: 100%;
 }
@@ -2738,6 +2698,18 @@ p.current-goal-value span {
         grid-column: span 1;
     }
 }
+
+.debug-loottable-item {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(4, 1fr);
+    gap: 1rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+.debug-loottable-item p { margin: 0; font-weight: 500; }
+.debug-loottable-item .input-group { gap: 0.2rem; }
+.debug-loottable-item .input-group label { font-size: 0.75rem; color: var(--subtle-text-color); }
 /* --- END: Debug Screen Styling --- */
 
 
@@ -2830,4 +2802,14 @@ p.current-goal-value span {
     font-weight: 700;
     border-color: var(--primary-color);
     box-shadow: var(--card-shadow);
+}
+
+.history-card.clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.history-card.clickable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }

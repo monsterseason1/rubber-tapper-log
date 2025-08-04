@@ -25,7 +25,6 @@ let currentFilter = 'all';
 
 const treeInfoBackdrop = document.getElementById('tree-info-backdrop');
 
-
 function clearGridTimers() {
     Object.values(gridTimers).forEach(clearInterval);
     gridTimers = {};
@@ -53,7 +52,6 @@ export function renderPlantation() {
         if (currentFilter === 'seed' && growthStage === 'Seed') return true;
         return false;
     });
-
 
     if (filteredTrees.length === 0) {
         let emptyMessage = `
@@ -200,29 +198,31 @@ function handleTreeCardClick(event) {
 }
 
 function setupTreeInfoPanelListeners() {
-    const rebindButton = (buttonId, handler) => {
-        const oldButton = document.getElementById(buttonId);
-        if (oldButton) {
-            const newButton = oldButton.cloneNode(true);
-            oldButton.parentNode.replaceChild(newButton, oldButton);
+    // Helper to safely re-bind events to buttons, preventing duplicates.
+    const rebindButton = (button, handler) => {
+        if (button) {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
             newButton.addEventListener('click', handler);
+            return newButton; // Return the new button for further manipulation
         }
+        return null;
     };
 
-    rebindButton('upgrade-tree-btn', handleUpgradeTree);
-    rebindButton('activate-tree-btn', handleActivateTree);
-    rebindButton('plant-tree-btn', handlePlantTree);
+    rebindButton(dom.upgradeTreeBtn, handleUpgradeTree);
+    rebindButton(dom.activateTreeBtn, handleActivateTree);
+    rebindButton(dom.plantTreeBtn, handlePlantTree);
     
-    // --- START: Rebind care action buttons (if they exist) ---
+    // Use event delegation for care actions for simplicity and robustness
     const careActionsList = document.getElementById('care-actions-list');
     if (careActionsList) {
-        // Use event delegation for simplicity
         const newCareActionsList = careActionsList.cloneNode(true); // Clone to remove old listeners
         careActionsList.parentNode.replaceChild(newCareActionsList, careActionsList);
 
         newCareActionsList.addEventListener('click', (event) => {
             const button = event.target.closest('button');
-            if (!button) return;
+            if (!button || !button.dataset.actionId) return;
+            
             const actionId = button.dataset.actionId;
             switch (actionId) {
                 case 'water':
@@ -237,23 +237,16 @@ function setupTreeInfoPanelListeners() {
             }
         });
     }
-    // --- END: Rebind care action buttons ---
 
-    rebindButton('grow-tree-btn', handleGrowTree);
-    
-    const sellBtn = document.getElementById('sell-tree-btn');
-    if (sellBtn) {
-        const newSellBtn = sellBtn.cloneNode(true);
-        sellBtn.parentNode.replaceChild(newSellBtn, sellBtn);
-        newSellBtn.addEventListener('click', () => {
-            if (selectedTreeIndex > -1) {
-                const treeToSell = state.playerTrees[selectedTreeIndex];
-                if (treeToSell) {
-                    openSellTreeModal(treeToSell, selectedTreeIndex);
-                }
+    rebindButton(dom.growTreeBtn, handleGrowTree);
+    rebindButton(dom.sellTreeBtn, () => {
+        if (selectedTreeIndex > -1) {
+            const treeToSell = state.playerTrees[selectedTreeIndex];
+            if (treeToSell) {
+                openSellTreeModal(treeToSell, selectedTreeIndex);
             }
-        });
-    }
+        }
+    });
 }
 
 /**
@@ -292,7 +285,7 @@ function displayTreeInfo(index) {
         growTreeBtn
     } = dom;
     
-    const careActionsList = document.getElementById('care-actions-list'); // Get the new list container
+    const careActionsList = document.getElementById('care-actions-list');
 
     if (growthStage === 'Grown') {
         treeGrownInfo.style.display = 'block';
@@ -352,20 +345,18 @@ function displayTreeInfo(index) {
         }
         dom.treeMaterialsList.innerHTML = materialsHtml || '<li>ไม่ต้องการวัตถุดิบ</li>';
         
-        const upgradeBtn = document.getElementById('upgrade-tree-btn');
-        if (upgradeBtn) upgradeBtn.disabled = !canUpgrade;
+        if (dom.upgradeTreeBtn) dom.upgradeTreeBtn.disabled = !canUpgrade;
 
         const isActive = state.activeTreeId === tree.treeId;
-        const activateBtn = document.getElementById('activate-tree-btn');
-        if(activateBtn){
+        if(dom.activateTreeBtn){
              if (isActive) {
-                activateBtn.innerHTML = '<i data-lucide="power-off"></i> ปิดใช้งาน';
-                activateBtn.classList.add('active');
+                dom.activateTreeBtn.innerHTML = '<i data-lucide="power-off"></i> ปิดใช้งาน';
+                dom.activateTreeBtn.classList.add('active');
             } else {
-                activateBtn.innerHTML = '<i data-lucide="power"></i> เปิดใช้งาน';
-                activateBtn.classList.remove('active');
+                dom.activateTreeBtn.innerHTML = '<i data-lucide="power"></i> เปิดใช้งาน';
+                dom.activateTreeBtn.classList.remove('active');
             }
-            activateBtn.disabled = false;
+            dom.activateTreeBtn.disabled = false;
         }
        
     } else { // Seed or Seedling
@@ -375,8 +366,7 @@ function displayTreeInfo(index) {
         if (growthStage === 'Seed') {
             seedlingCareSection.style.display = 'none';
             seedPlantSection.style.display = 'block';
-            const plantBtn = document.getElementById('plant-tree-btn');
-            if (plantBtn) plantBtn.disabled = false;
+            if (dom.plantTreeBtn) dom.plantTreeBtn.disabled = false;
             dom.plantActionDescription.textContent = treeData.description || 'เริ่มต้นการปลูกเมล็ดพันธุ์นี้ให้กลายเป็นต้นกล้า';
         } else { // Seedling
             seedPlantSection.style.display = 'none';
@@ -403,9 +393,7 @@ function displayTreeInfo(index) {
                 growTreeBtn.style.display = 'none';
                 dom.growthCountdown.textContent = formatTime(timeLeft / 1000);
                 
-                // --- START: New logic to render action list ---
                 renderCareActions(currentTreeState);
-                // --- END: New logic ---
             };
             
             updateGrowthDisplay();
@@ -420,7 +408,6 @@ function displayTreeInfo(index) {
     setupTreeInfoPanelListeners();
 }
 
-// --- START: New Function to render the care actions list ---
 /**
  * Renders the list of care actions for a seedling.
  * @param {object} tree The seedling object.
@@ -438,7 +425,6 @@ function renderCareActions(tree) {
         let isAvailable = true;
         let conditionHtml = '';
 
-        // --- Handle Water Action ---
         if (action.id === 'water') {
             description = description.replace('{value}', action.timeReductionHours);
             const cooldownMs = action.cooldownHours * 60 * 60 * 1000;
@@ -453,7 +439,6 @@ function renderCareActions(tree) {
             }
         }
         
-        // --- Handle Material Cost Actions ---
         if (action.cost) {
             const material = action.cost.material;
             const costAmount = action.cost.amount;
@@ -485,13 +470,9 @@ function renderCareActions(tree) {
 
     lucide.createIcons({ nodes: careActionsList.querySelectorAll('i') });
 }
-// --- END: New Function ---
-
 
 /**
- * --- START: REVISED FUNCTION ---
- * Calculates the value of a specific attribute for a given tree at a given level.
- * This function is now decoupled from the component's state (selectedTreeIndex).
+ * Calculates the value of a specific attribute for a given tree at its current level.
  * @param {object} tree - The tree object to calculate for.
  * @param {string} attrKey - The key of the attribute (e.g., 'coinYield').
  * @returns {number} The calculated value of the attribute.
@@ -509,11 +490,8 @@ export function calculateAttributeValue(tree, attrKey) {
     const growthValue = attrInfo.growth || 0;
     const level = tree.level || 1;
     
-    const calculatedValue = baseValue + (growthValue * (level - 1));
-    return calculatedValue;
+    return baseValue + (growthValue * (level - 1));
 }
-// --- END: REVISED FUNCTION ---
-
 
 function handleAttributeClick(event) {
     const li = event.target.closest('.clickable-attribute');
@@ -523,10 +501,7 @@ function handleAttributeClick(event) {
     const tree = state.playerTrees[selectedTreeIndex];
     if (!tree) return;
     
-    // --- START: MODIFIED CALL ---
-    // Pass the selected tree as context to get the correct bonus value.
     showItemDetailModal(attrKey, 'attribute', tree);
-    // --- END: MODIFIED CALL ---
 }
 
 function getIconForAttribute(key) {
@@ -548,7 +523,7 @@ function formatAttributeForDisplay(key, value, isNumberOnly = false) {
 }
 
 function formatAttributeValue(key, value, showPlus = false) {
-    let sign = showPlus ? '+' : '';
+    let sign = showPlus && value > 0 ? '+' : '';
     if (typeof value !== 'number') return value;
 
     if (key.toLowerCase().includes('percent') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('gain') || key.toLowerCase().includes('yield')) {
@@ -558,12 +533,39 @@ function formatAttributeValue(key, value, showPlus = false) {
     }
 }
 
-
-function getXpForNextLevelForTree(tree) { const treeData = gameData.treeSpecies[tree.species]; if (!treeData) return 0; return Math.round((treeData.baseExpPerLevel || 10) * Math.pow(tree.level || 1, treeData.growthRate || 1.1)); }
-export function getMaterialsNeededForUpgrade(tree) {
+/**
+ * --- START: FORMATTED FUNCTION ---
+ * Calculates the XP needed for a tree to level up.
+ * This is the function that was causing the syntax error.
+ * @param {object} tree The tree object.
+ * @returns {number} XP needed for the next level.
+ */
+function getXpForNextLevelForTree(tree) {
+    if (!tree) return 0;
     const treeData = gameData.treeSpecies[tree.species];
+    if (!treeData) return 0;
+
+    const baseExp = treeData.baseExpPerLevel || 10;
+    const level = tree.level || 1;
+    const growthRate = treeData.growthRate || 1.1;
+
+    return Math.round(baseExp * Math.pow(level, growthRate));
+}
+// --- END: FORMATTED FUNCTION ---
+
+/**
+ * Calculates the materials needed to upgrade a tree to the next level.
+ * @param {object} tree The tree object.
+ * @returns {object} An object mapping material keys to needed amounts.
+ */
+export function getMaterialsNeededForUpgrade(tree) {
     const needed = {};
-    if (!treeData || tree.level >= (treeData.maxLevel || 10)) return needed;
+    if (!tree) return needed;
+
+    const treeData = gameData.treeSpecies[tree.species];
+    if (!treeData || tree.level >= (treeData.maxLevel || 10)) {
+        return needed;
+    }
 
     const baseMats = treeData.baseMaterialsNeeded || {};
     const currentLevel = tree.level || 1;
@@ -576,7 +578,17 @@ export function getMaterialsNeededForUpgrade(tree) {
     }
     return needed;
 }
-function rarityToMultiplier(rarity) { switch(rarity) { case 'Common': return 1.0; case 'Uncommon': return 1.3; case 'Rare': return 1.8; case 'Epic': return 2.5; case 'Legendary': return 3.5; default: return 1.0; } }
+
+function rarityToMultiplier(rarity) {
+    switch(rarity) {
+        case 'Common': return 1.0;
+        case 'Uncommon': return 1.3;
+        case 'Rare': return 1.8;
+        case 'Epic': return 2.5;
+        case 'Legendary': return 3.5;
+        default: return 1.0;
+    }
+}
 
 function handleActivateTree() {
     if (selectedTreeIndex === -1) return;
@@ -625,19 +637,13 @@ function handleUpgradeTree() {
     }
 
     const materialsNeeded = getMaterialsNeededForUpgrade(tree);
-    let canUpgrade = true;
     for (const matKey in materialsNeeded) {
         const neededAmount = materialsNeeded[matKey];
         const availableAmount = state.materials[matKey] || 0;
         if (neededAmount > availableAmount) {
-            canUpgrade = false;
-            break;
+            showToast({ title: 'วัตถุดิบไม่เพียงพอ!', lucideIcon: 'alert-circle' });
+            return;
         }
-    }
-
-    if (!canUpgrade) {
-        showToast({ title: 'วัตถุดิบไม่เพียงพอ!', lucideIcon: 'alert-circle' });
-        return;
     }
 
     for (const matKey in materialsNeeded) {
@@ -648,6 +654,7 @@ function handleUpgradeTree() {
     const xpToGrant = getXpForNextLevelForTree(tree) / 2;
     const finalXpToGrant = applyUpgradeEffect('tree_xp_boost_percent', xpToGrant);
     state.playerTrees[selectedTreeIndex].exp = (state.playerTrees[selectedTreeIndex].exp || 0) + Math.round(finalXpToGrant);
+    
     let leveledUp = false;
     let treeXpNeeded = getXpForNextLevelForTree(state.playerTrees[selectedTreeIndex]);
     while (state.playerTrees[selectedTreeIndex].exp >= treeXpNeeded && state.playerTrees[selectedTreeIndex].level < (treeData.maxLevel || 10)) {
@@ -679,14 +686,11 @@ function handlePlantTree() {
 
     tree.growthStage = 'Seedling';
     let growthHours = treeData.baseGrowthTimeHours || 8; 
-    const activeTree = getActiveTree();
     
+    const activeTree = getActiveTree();
     let growthRateBonus = 0;
     if (activeTree) {
-        const growthRateAttr = gameData.treeSpecies[activeTree.species]?.baseAttributes?.growthRate;
-        if (growthRateAttr) {
-            growthRateBonus = calculateAttributeValue(activeTree, 'growthRate');
-        }
+        growthRateBonus = calculateAttributeValue(activeTree, 'growthRate');
     }
 
     growthHours *= (1 - growthRateBonus);
@@ -767,7 +771,38 @@ function handleUseGrowthAccelerant() {
     displayTreeInfo(selectedTreeIndex);
 }
 
-function handleGrowTree() { if (selectedTreeIndex === -1) return; const tree = state.playerTrees[selectedTreeIndex]; if(!tree || tree.growthStage !== 'Seedling') return; const timeLeft = (tree.growsAtTimestamp || 0) - Date.now(); if (timeLeft > 0) { showToast({ title: 'ต้นยังไม่พร้อมเติบโต!', lucideIcon: 'hourglass' }); return; } tree.growthStage = 'Grown'; delete tree.growsAtTimestamp; delete tree.lastWateredTimestamp; saveStateObject('playerTrees', state.playerTrees); showToast({ title: `ต้นกล้า ${gameData.treeSpecies[tree.species].name} โตเต็มวัยแล้ว!`, lucideIcon: 'trees', customClass: 'mission-complete' }); renderPlantation(); displayTreeInfo(selectedTreeIndex); }
+/**
+ * --- START: FORMATTED FUNCTION ---
+ * Handles the final growth of a seedling into a grown tree.
+ * @param {object} tree The tree object.
+ */
+function handleGrowTree() {
+    if (selectedTreeIndex === -1) return;
+    const tree = state.playerTrees[selectedTreeIndex];
+    if (!tree || tree.growthStage !== 'Seedling') return;
+
+    const timeLeft = (tree.growsAtTimestamp || 0) - Date.now();
+    if (timeLeft > 0) {
+        showToast({ title: 'ต้นยังไม่พร้อมเติบโต!', lucideIcon: 'hourglass' });
+        return;
+    }
+    
+    tree.growthStage = 'Grown';
+    delete tree.growsAtTimestamp;
+    delete tree.lastWateredTimestamp;
+    
+    saveStateObject('playerTrees', state.playerTrees);
+    
+    showToast({
+        title: `ต้นกล้า ${gameData.treeSpecies[tree.species].name} โตเต็มวัยแล้ว!`,
+        lucideIcon: 'trees',
+        customClass: 'mission-complete'
+    });
+    
+    renderPlantation();
+    displayTreeInfo(selectedTreeIndex);
+}
+// --- END: FORMATTED FUNCTION ---
 
 export function handleCloseTreeInfo() {
     if (growthTimerInterval) clearInterval(growthTimerInterval);
@@ -789,10 +824,12 @@ function handleFilterClick(event) {
     if (!clickedButton) return;
     const filterValue = clickedButton.dataset.filter;
     if (filterValue === currentFilter) return;
+    
     currentFilter = filterValue;
     dom.plantationFilterTabs.querySelectorAll('button').forEach(button => {
         button.classList.toggle('active', button.dataset.filter === currentFilter);
     });
+    
     renderPlantation();
 }
 

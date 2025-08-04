@@ -528,6 +528,7 @@ export function showScreen(screenToShow, isTapping = false) {
 }
 
 /**
+ * --- START: MODIFIED FUNCTION ---
  * Adjusts the visibility and content of setup screen elements based on user history.
  */
 export function adjustSetupScreenForUser() {
@@ -555,12 +556,25 @@ export function adjustSetupScreenForUser() {
         dom.startSessionBtn.innerHTML = `<i data-lucide="map-pin"></i> เริ่มสร้างแผนที่ (ต้นที่ ${nextTreeNum})`;
         dom.startSessionBtn.classList.add('mapping-active');
     } else {
+        // Check if the user is in the middle of a tapping cycle
+        const isContinuingCycle = state.plantationSize &&
+                                  state.plantationSize > 0 &&
+                                  state.tappedTreesInCurrentCycle > 0 &&
+                                  state.tappedTreesInCurrentCycle < state.plantationSize;
+
+        if (isContinuingCycle) {
+            const nextTreeNumber = state.tappedTreesInCurrentCycle + 1;
+            dom.startSessionBtn.innerHTML = `<i data-lucide="play-circle"></i> เริ่มกรีดต่อต้นที่ ${nextTreeNumber}`;
+            dom.startSessionBtn.classList.remove('mapping-active');
+        } else {
         dom.startSessionBtn.innerHTML = '<i data-lucide="play-circle"></i> เริ่มบันทึกการกรีด';
         dom.startSessionBtn.classList.remove('mapping-active');
+    }
     }
     
     lucide.createIcons({ nodes: [dom.plantationMapBtn, dom.startSessionBtn].map(el => el.querySelector('i')).filter(Boolean) });
 }
+// --- END: MODIFIED FUNCTION ---
 
 
 /**
@@ -844,6 +858,8 @@ export function renderAchievements() {
     }
 }
 
+let currentSummarySession = null; // Store the current session being summarized
+
 export function renderHistory() {
     if (!dom.historyListContainer) return;
     dom.historyListContainer.innerHTML = ''; 
@@ -852,9 +868,11 @@ export function renderHistory() {
         return;
     }
     const historyElements = [];
-    [...state.sessionHistory].reverse().forEach(session => {
+    [...state.sessionHistory].reverse().forEach((session, index) => {
+        const originalIndex = state.sessionHistory.length - 1 - index;
         const card = document.createElement('div');
-        card.className = 'history-card anim-staggered-item';
+        card.className = 'history-card anim-staggered-item clickable';
+        card.dataset.sessionIndex = originalIndex; // Add session index for identification
         const sessionDate = new Date(session.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
         const sessionTime = new Date(session.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
@@ -870,6 +888,16 @@ export function renderHistory() {
         dom.historyListContainer.appendChild(card);
         historyElements.push(card);
     });
+
+    // Add click event listener for history cards
+    dom.historyListContainer.addEventListener('click', (event) => {
+        const card = event.target.closest('.history-card');
+        if (card) {
+            const sessionIndex = parseInt(card.dataset.sessionIndex, 10);
+            showSummaryForHistory(state.sessionHistory[sessionIndex], 'history');
+        }
+    });
+
     lucide.createIcons({ nodes: dom.historyListContainer.querySelectorAll('i') });
 
     if (state.animationEffectsEnabled) {
@@ -881,6 +909,51 @@ export function renderHistory() {
     } else {
         historyElements.forEach(el => el.classList.add('loaded'));
     }
+}
+
+export function showSummaryForHistory(sessionData, returnContext) {
+    currentSummarySession = { data: sessionData, returnContext };
+
+    dom.summaryTotalTrees.textContent = sessionData.tappedTrees.toLocaleString();
+    dom.summaryAvgTime.textContent = sessionData.avgTime.toFixed(2);
+    dom.summaryTotalTime.textContent = formatTime(sessionData.totalTime);
+
+    const isNewRecord = sessionData.avgTime === state.bestAvgTime;
+    dom.newRecordBadge.classList.toggle('hidden', !isNewRecord);
+
+    dom.aiInsightText.textContent = sessionData.aiInsight || 'ไม่มีการวิเคราะห์';
+
+    const pacingAnalysis = getPacingAnalysis(sessionData.lapTimes);
+    dom.pacingAnalysisCard.innerHTML = pacingAnalysis;
+
+    dom.newSessionBtn.innerHTML = '<i data-lucide="arrow-left"></i> กลับ';
+    lucide.createIcons({ nodes: [dom.newSessionBtn.querySelector('i')] });
+
+    showScreen(dom.summaryScreen);
+}
+
+/**
+ * Analyzes pacing data from session lap times and returns a summary.
+ * @param {number[]} lapTimes - Array of lap times in seconds.
+ * @returns {string} - HTML string summarizing the pacing analysis.
+ */
+function getPacingAnalysis(lapTimes) {
+    if (!lapTimes || lapTimes.length < 2) {
+        return '<p class="info-text">ไม่พบข้อมูลรอบเพียงพอสำหรับการวิเคราะห์</p>';
+    }
+
+    const differences = lapTimes.slice(1).map((time, index) => time - lapTimes[index]);
+    const fasterCount = differences.filter(diff => diff < 0).length;
+    const slowerCount = differences.filter(diff => diff > 0).length;
+
+    let summary = `<p>จำนวนรอบทั้งหมด: <strong>${lapTimes.length}</strong></p>`;
+    summary += `<p>รอบที่เร็วขึ้น: <strong>${fasterCount}</strong></p>`;
+    summary += `<p>รอบที่ช้าลง: <strong>${slowerCount}</strong></p>`;
+
+    const avgDifference = differences.reduce((sum, diff) => sum + diff, 0) / differences.length;
+    summary += `<p>ความแตกต่างเฉลี่ยต่อรอบ: <strong>${avgDifference.toFixed(2)} วินาที</strong></p>`;
+
+    return summary;
 }
 
 export function updateGoalDisplay() {
@@ -1232,8 +1305,8 @@ export function renderSalesDashboard() {
  * Handles the entire process of generating and sharing the session summary image.
  */
 export async function handleShareSession() {
-    const lastSession = state.sessionHistory.length > 0 ? state.sessionHistory[state.sessionHistory.length - 1] : null;
-    if (!lastSession) {
+    const sessionToShare = currentSummarySession ? currentSummarySession.data : null;
+    if (!sessionToShare) {
         showToast({ title: 'ไม่มีข้อมูลรอบล่าสุดให้แชร์', lucideIcon: 'alert-circle' });
         return;
     }
@@ -1259,10 +1332,10 @@ export async function handleShareSession() {
     // --- END: ON-DEMAND ELEMENT QUERY ---
 
     // 1. Populate the hidden card with data
-    shareCardTrees.textContent = lastSession.tappedTrees.toLocaleString();
-    shareCardTotalTime.textContent = formatTime(lastSession.totalTime);
-    shareCardAvgTime.textContent = lastSession.avgTime.toFixed(2);
-    const isNewRecord = lastSession.avgTime === state.bestAvgTime;
+    shareCardTrees.textContent = sessionToShare.tappedTrees.toLocaleString();
+    shareCardTotalTime.textContent = formatTime(sessionToShare.totalTime);
+    shareCardAvgTime.textContent = sessionToShare.avgTime.toFixed(2);
+    const isNewRecord = sessionToShare.avgTime === state.bestAvgTime;
     shareCardRecordBadge.classList.toggle('hidden', !isNewRecord);
 
     // 2. Temporarily apply current theme to the card for screenshot
@@ -1293,7 +1366,7 @@ export async function handleShareSession() {
         const shareData = {
             files: [file],
             title: 'ผลการกรีดยางของฉัน!',
-            text: `ทำลายสถิติใหม่ด้วยความเร็ว ${lastSession.avgTime.toFixed(2)} วิ/ต้น! ลองมาเล่น Rubber Tapper's Log กัน!`,
+            text: `ทำลายสถิติใหม่ด้วยความเร็ว ${sessionToShare.avgTime.toFixed(2)} วิ/ต้น! ลองมาเล่น Rubber Tapper's Log กัน!`,
         };
 
         // 5. Use Web Share API if available, otherwise fallback to download
@@ -1529,4 +1602,84 @@ export function setupItemDetailModalListeners() {
             }
         });
     }
+}
+
+/**
+ * Component สำหรับสร้างการ์ดแสดงข้อมูลต้นไม้ 1 ใบ
+ * @param {object} tree - The tree object from state.playerTrees
+ * @param {number} originalIndex - The original index of the tree in the main array
+ * @returns {HTMLElement} - The fully constructed card element
+ */
+function TreeCard(tree, originalIndex) {
+    if (!tree || !tree.species) {
+        console.warn('Skipping malformed tree object:', tree);
+        return null; // Return null if data is bad
+    }
+    const treeData = gameData.treeSpecies[tree.species];
+    if (!treeData) {
+        console.warn(`Tree species data missing for species: ${tree.species}`);
+        return null;
+    }
+
+    const card = document.createElement('div');
+    const growthStage = tree.growthStage || 'Grown';
+    
+    // --- START: Logic ที่เกี่ยวกับ Card ใบเดียวถูกย้ายมาที่นี่ทั้งหมด ---
+    let stageClass = '';
+    let stageText = '';
+    let cardIcon = treeData.icon || 'trees';
+    let infoHtml = '';
+
+    switch (growthStage) {
+        case 'Seed':
+            stageClass = 'seed';
+            stageText = 'เมล็ด';
+            cardIcon = 'package';
+            infoHtml = `<div class="tree-info-text ready-to-plant"><i data-lucide="shovel"></i><span>พร้อมปลูก</span></div>`;
+            break;
+        case 'Seedling':
+            stageClass = 'seedling';
+            stageText = 'ต้นกล้า';
+            cardIcon = 'sprout';
+            const countdownId = `countdown_${tree.treeId}`;
+            // หมายเหตุ: การจัดการ Timer ที่ซับซ้อนยังคงต้องทำแยก แต่การสร้าง HTML เริ่มต้นอยู่ที่นี่
+            infoHtml = `<div class="tree-info-text growth-countdown" id="${countdownId}"><i data-lucide="hourglass"></i><span>คำนวณ...</span></div>`;
+            break;
+        default: // Grown
+            stageClass = `rarity-${tree.rarity.toLowerCase()}`;
+            const currentExp = tree.exp || 0;
+            const expForNext = getXpForNextLevelForTree(tree);
+            const expPercentage = expForNext > 0 ? (currentExp / expForNext) * 100 : 100;
+            infoHtml = `
+                <div class="tree-exp-bar-container">
+                    <div class="tree-exp-bar" style="width: ${Math.min(expPercentage, 100)}%;"></div>
+                </div>
+                <p class="tree-exp-label">EXP: ${currentExp.toLocaleString()} / ${expForNext.toLocaleString()}</p>
+            `;
+    }
+    // --- END: Logic ที่เกี่ยวกับ Card ---
+
+    const isActive = state.activeTreeId === tree.treeId;
+    card.className = `tree-card ${stageClass} ${isActive ? 'active' : ''}`;
+    // **สำคัญ:** เรายังคงต้องใช้ index เดิมเพื่อการคลิก
+    card.dataset.treeIndex = originalIndex;
+
+    const newItemIndicator = tree.isNew ? '<div class="new-item-indicator">ใหม่</div>' : '';
+    const stageBadgeHtml = stageText ? `<div class="stage-badge ${stageClass}">${stageText}</div>` : '';
+
+    // สร้าง innerHTML จากข้อมูลที่ประมวลผลแล้ว
+    card.innerHTML = `
+        ${isActive ? '<div class="active-tree-indicator"><i data-lucide="power"></i><span>Active</span></div>' : ''}
+        ${newItemIndicator}
+        ${stageBadgeHtml}
+        <div class="tree-icon"><i data-lucide="${cardIcon}"></i></div>
+        <h4>${treeData.name}</h4>
+        <p class="tree-level">${growthStage !== 'Grown' ? tree.rarity : `Lvl ${tree.level}`}</p>
+        <div class="tree-card-footer">${infoHtml}</div>
+    `;
+
+    // **Encapsulation:** จัดการ Event Listener ภายใน Component เองเลย
+    card.addEventListener('click', handleTreeCardClick);
+
+    return card;
 }

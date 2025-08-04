@@ -117,6 +117,7 @@ export const summaryAvgTime = document.getElementById('summary-avg-time');
 export const newRecordBadge = document.getElementById('new-record-badge');
 export const aiInsightText = document.getElementById('ai-insight-text');
 export const newSessionBtn = document.getElementById('new-session-btn');
+export const backToHistoryBtn = document.getElementById('back-to-history-btn');
 export const pacingAnalysisCard = document.getElementById('pacing-analysis-card');
 export const pacingAnalysisText = document.getElementById('pacing-analysis-text');
 export const pacingFirstHalf = document.getElementById('pacing-first-half');
@@ -316,4 +317,6 @@ export const debugAddTreeRaritySelect = document.getElementById('debug-add-tree-
 export const debugAddTreeBtn = document.getElementById('debug-add-tree-btn');
 export const debugTreeCountSpan = document.getElementById('debug-tree-count');
 export const debugTreesList = document.getElementById('debug-trees-list');
+export const debugLootTableList = document.getElementById('debug-loottable-list');
+export const debugLootTableResetBtn = document.getElementById('debug-loottable-reset-btn');
 // --- END: Debug Screen Elements ---
